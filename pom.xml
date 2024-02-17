@@ -33,6 +33,12 @@
 <!--    <scope>provided</scope>-->
 </dependency>
 
+<!--<dependency>-->
+<!--  <groupId>cn.hutool</groupId>-->
+<!--  <artifactId>hutool-all</artifactId>-->
+<!--  <version>5.8.16</version>-->
+<!--</dependency>-->
+
 
 <!-- https://mvnrepository.com/artifact/org.terrier/terrier-core -->
 <dependency>

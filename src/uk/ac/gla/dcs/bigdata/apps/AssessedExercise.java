@@ -1,18 +1,23 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import org.apache.spark.SparkConf;
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.SparkSession;
+import java.util.Set;
 
+import org.apache.spark.SparkConf;
+import org.apache.spark.sql.*;
+
+import org.apache.spark.util.CollectionAccumulator;
+import scala.jdk.Accumulator;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.studentfunctions.NewsArticleMap;
+import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
 /**
  * This is the main class where your Spark topology should be specified.
@@ -92,13 +97,29 @@ public class AssessedExercise {
 		Dataset<Row> newsjson = spark.read().text(newsFile); // read in files as string rows, one row per article
 		
 		// Perform an initial conversion from Dataset<Row> to Query and NewsArticle Java objects
+//		CollectionAccumulator<String> queryTermsAccumulator = spark.sparkContext().collectionAccumulator();
 		Dataset<Query> queries = queriesjson.map(new QueryFormaterMap(), Encoders.bean(Query.class)); // this converts each row into a Query
+		queries.show();
 		Dataset<NewsArticle> news = newsjson.map(new NewsFormaterMap(), Encoders.bean(NewsArticle.class)); // this converts each row into a NewsArticle
 		
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
-		
+		// Convert Query
+		List<String> queryTerms = new ArrayList<>();
+		Set<String> queryTermsSet = new HashSet<>();
+		for(Query query : queries.collectAsList()) {
+			queryTermsSet.addAll(query.getQueryTerms());
+		}
+		queryTerms.addAll(queryTermsSet);
+//		System.out.println(queryTerms);
+
+		// Convert NewsArticle
+		Encoder<NewsArticleProcessed> newsArticleProcessedEncoder = Encoders.bean(NewsArticleProcessed.class);
+		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(), newsArticleProcessedEncoder);
+
+		//test the newsArticleProcessed
+		System.out.println(newsArticleProcessed.count());
 		
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
