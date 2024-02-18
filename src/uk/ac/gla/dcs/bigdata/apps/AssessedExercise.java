@@ -116,36 +116,19 @@ public class AssessedExercise {
 //		}
 //			queryTerms.addAll(queryTermsSet);
 //			System.out.println(queryTerms);
+
 		List<String> allQueryTerms = queries.flatMap(
 				(FlatMapFunction<Query, String>) query -> query.getQueryTerms().iterator(),
 				Encoders.STRING()
 		).collectAsList();
 		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
-		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(
-				(MapFunction<NewsArticle, NewsArticleProcessed>) article -> {
-					NewsArticleProcessed processed = new NewsArticleMap().call(article);
-					Map<String, Long> wordCounts = processed.getWordCount();
 
-					// Compute term frequency for query terms
-					Map<String, Long> queryTermFrequency = new HashMap<>();
-					long docLength = processed.getArticleLength(); // Assuming this is already computed in NewsArticleProcessed
 
-					for (String term : broadcastedQueryTerms.value()) {
-						Long count = wordCounts.getOrDefault(term, 0L);
-						queryTermFrequency.put(term, count);
-					}
-
-					processed.setQueryTermFrequency(queryTermFrequency);
-					processed.setArticleLength(docLength); // This might be redundant if already set
-
-					return processed;
-				}, Encoders.bean(NewsArticleProcessed.class)
-		);
 
 		// Convert NewsArticle
 		//122648418750842
 
-		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(), Encoders.bean(NewsArticleProcessed.class));
+		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms), Encoders.bean(NewsArticleProcessed.class));
 
 
 		

@@ -19,6 +19,15 @@ public class NewsArticleProcessed implements Serializable {
     private String source; //article source
     private int articleLength; //article's length
     private Map<String, Long> wordCount; //word frequency
+    private Map<String, Long> queryTermFrequency; //query term frequency
+
+    public Map<String, Long> getQueryTermFrequency() {
+        return queryTermFrequency;
+    }
+
+    public void setQueryTermFrequency(Map<String, Long> queryTermFrequency) {
+        this.queryTermFrequency = queryTermFrequency;
+    }
 
     public Map<String, Long> getWordCount() {
         return wordCount;
@@ -28,12 +37,13 @@ public class NewsArticleProcessed implements Serializable {
         this.wordCount = wordCount;
     }
 
-    public NewsArticleProcessed(String id, List<String> title, List<String> contents, int articleLength, Map<String, Long> wordCount) {
+    public NewsArticleProcessed(String id, List<String> title, List<String> contents, int articleLength, Map<String, Long> wordCount, Map<String, Long> queryTermFrequency) {
         this.id = id;
         this.title = title;
         this.contents = contents;
         this.articleLength = articleLength;
         this.wordCount = wordCount;
+        this.queryTermFrequency = queryTermFrequency;
     }
 
     public String getId() {

@@ -40,7 +40,7 @@ public class PreDPHCurrent implements MapFunction<NewsArticleProcessed,PreDPHCur
 	//
 	@Override
 	public PreDPHCurrentData call(NewsArticleProcessed value) throws Exception {
-		System.out.println(targetQuery);
+//		System.out.println(targetQuery);
 		List<String> contents = value.getContents();
 		int termFrequencyInCurrentDocument = 0;
 		int currentDocumentLength = 0;

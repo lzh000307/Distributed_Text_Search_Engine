@@ -2,6 +2,7 @@ package uk.ac.gla.dcs.bigdata.studentfunctions;
 
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.broadcast.Broadcast;
 import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
@@ -17,6 +18,11 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
 
     private transient TextPreProcessor newsProcessor;
     private List<String> contentsProcessed;
+    Broadcast<List<String>> broadcastedQueryTerms;
+
+    public NewsArticleMap(Broadcast<List<String>> broadcastedQueryTerms) {
+        this.broadcastedQueryTerms = broadcastedQueryTerms;
+    }
 
     @Override
     public NewsArticleProcessed call(NewsArticle value) throws Exception {
@@ -65,7 +71,15 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
             wordCount.put(word, wordCount.getOrDefault(word, 0L) + 1);
         }
 
+        // Compute term frequency for query terms
+        Map<String, Long> queryTermFrequency = new HashMap<>();
+        for (String term : broadcastedQueryTerms.value()) {
+            Long count = wordCount.getOrDefault(term, 0L);
+            queryTermFrequency.put(term, count);
+        }
 
-        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount);
+
+
+        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount, queryTermFrequency);
     }
 }
