@@ -1,18 +1,28 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
+import java.beans.Encoder;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import org.apache.spark.SparkConf;
 import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Encoders;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.Encoders;
 
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.studentstructures.PreDPHCurrentData;
+import uk.ac.gla.dcs.bigdata.studentfunctions.*;
+import uk.ac.gla.dcs.bigdata.studentstructures.*;
+
+
 
 /**
  * This is the main class where your Spark topology should be specified.
@@ -80,7 +90,6 @@ public class AssessedExercise {
 			}
 		}
 		
-		
 	}
 	
 	
@@ -98,7 +107,29 @@ public class AssessedExercise {
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
+		// Convert Query
+		List<String> queryTerms = new ArrayList<>();
+		Set<String> queryTermsSet = new HashSet<>();
+		for(Query query : queries.collectAsList()) {
+			queryTermsSet.addAll(query.getQueryTerms());
+		}
+			queryTerms.addAll(queryTermsSet);
+//			System.out.println(queryTerms);
+
+			// Convert NewsArticle
+
+		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(), Encoders.bean(NewsArticleProcessed.class));
 		
+		List<Query> eachQuery = queries.collectAsList();
+		for (int i=0; i<eachQuery.size(); i++) {
+			Dataset<PreDPHCurrentData> DPHCurrentScoreLis = newsArticleProcessed.map(new PreDPHCurrent(eachQuery.get(i).getOriginalQuery()), Encoders.bean(PreDPHCurrentData.class));
+			PreDPHCurrentData totalPreDPHinfo = DPHCurrentScoreLis.reduce(new PreDPHTotalReduce());
+			int totalTermFrequencyInCorpus = totalPreDPHinfo.getTermFrequencyInCurrentDocument();
+			long totalDocsInCorpus = DPHCurrentScoreLis.count();
+			double averageDocumentLengthInCorpus = totalPreDPHinfo.getCurrentDocumentLength()/totalDocsInCorpus;
+			Dataset<Double> DPH = DPHCurrentScoreLis.map(new GetDPH(totalTermFrequencyInCorpus, averageDocumentLengthInCorpus, totalDocsInCorpus), Encoders.DOUBLE());
+			DPH.show();
+		}
 		
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
