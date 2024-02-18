@@ -2,14 +2,12 @@ package uk.ac.gla.dcs.bigdata.apps;
 
 import java.beans.Encoder;
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.api.java.function.MapFunction;
+import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
@@ -111,16 +109,40 @@ public class AssessedExercise {
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
 		// Convert Query
-		List<String> queryTerms = new ArrayList<>();
-		Set<String> queryTermsSet = new HashSet<>();
-		for(Query query : queries.collectAsList()) {
-			queryTermsSet.addAll(query.getQueryTerms());
-		}
-			queryTerms.addAll(queryTermsSet);
+//		List<String> queryTerms = new ArrayList<>();
+//		Set<String> queryTermsSet = new HashSet<>();
+//		for(Query query : queries.collectAsList()) {
+//			queryTermsSet.addAll(query.getQueryTerms());
+//		}
+//			queryTerms.addAll(queryTermsSet);
 //			System.out.println(queryTerms);
+		List<String> allQueryTerms = queries.flatMap(
+				(FlatMapFunction<Query, String>) query -> query.getQueryTerms().iterator(),
+				Encoders.STRING()
+		).collectAsList();
+		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
+		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(
+				(MapFunction<NewsArticle, NewsArticleProcessed>) article -> {
+					NewsArticleProcessed processed = new NewsArticleMap().call(article);
+					Map<String, Long> wordCounts = processed.getWordCount();
 
+					// Compute term frequency for query terms
+					Map<String, Long> queryTermFrequency = new HashMap<>();
+					long docLength = processed.getArticleLength(); // Assuming this is already computed in NewsArticleProcessed
 
-			// Convert NewsArticle
+					for (String term : broadcastedQueryTerms.value()) {
+						Long count = wordCounts.getOrDefault(term, 0L);
+						queryTermFrequency.put(term, count);
+					}
+
+					processed.setQueryTermFrequency(queryTermFrequency);
+					processed.setArticleLength(docLength); // This might be redundant if already set
+
+					return processed;
+				}, Encoders.bean(NewsArticleProcessed.class)
+		);
+
+		// Convert NewsArticle
 		//122648418750842
 
 		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(), Encoders.bean(NewsArticleProcessed.class));
