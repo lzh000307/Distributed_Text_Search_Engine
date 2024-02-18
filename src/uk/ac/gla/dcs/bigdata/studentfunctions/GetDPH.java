@@ -1,6 +1,7 @@
 package uk.ac.gla.dcs.bigdata.studentfunctions;
 import org.apache.spark.api.java.function.MapFunction;
 
+import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.studentstructures.PreDPHCurrentData;
 import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
 
@@ -23,6 +24,8 @@ public class GetDPH implements MapFunction<PreDPHCurrentData,Double>{
 	@Override
 	public Double call(PreDPHCurrentData value) throws Exception {
 		short termFrequencyInCurrentDocument = (short)value.getTermFrequencyInCurrentDocument();
+		RankedResult rr = new RankedResult();
+
 		int currentDocumentLength = value.getCurrentDocumentLength();
 		if(totalDocsInCorpus==0 || totalTermFrequencyInCorpus==0) {
 			return (double) -100;

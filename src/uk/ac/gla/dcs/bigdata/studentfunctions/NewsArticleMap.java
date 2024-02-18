@@ -3,6 +3,7 @@ package uk.ac.gla.dcs.bigdata.studentfunctions;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
+import org.apache.spark.util.LongAccumulator;
 import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
@@ -19,9 +20,13 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
     private transient TextPreProcessor newsProcessor;
     private List<String> contentsProcessed;
     Broadcast<List<String>> broadcastedQueryTerms;
+    private LongAccumulator totalArticlesAccumulator;
+    private LongAccumulator totalLengthAccumulator;
 
-    public NewsArticleMap(Broadcast<List<String>> broadcastedQueryTerms) {
+    public NewsArticleMap(Broadcast<List<String>> broadcastedQueryTerms, LongAccumulator totalArticles, LongAccumulator totalLength) {
         this.broadcastedQueryTerms = broadcastedQueryTerms;
+        this.totalArticlesAccumulator = totalArticles;
+        this.totalLengthAccumulator = totalLength;
     }
 
     @Override
@@ -77,6 +82,14 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
             Long count = wordCount.getOrDefault(term, 0L);
             queryTermFrequency.put(term, count);
         }
+
+
+
+        // 更新累加器
+        totalArticlesAccumulator.add(1);
+//        System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
+        totalLengthAccumulator.add(articleLength);
+//        System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
 
 
 
