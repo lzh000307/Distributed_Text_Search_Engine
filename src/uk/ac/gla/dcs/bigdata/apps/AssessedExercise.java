@@ -1,6 +1,5 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
-import java.beans.Transient;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -17,7 +16,6 @@ import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
-import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentfunctions.NewsArticleMap;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
@@ -110,15 +108,11 @@ public class AssessedExercise {
 		// Convert Query
 		List<String> queryTerms = new ArrayList<>();
 		Set<String> queryTermsSet = new HashSet<>();
-		TextPreProcessor tp = new TextPreProcessor();
 		for(Query query : queries.collectAsList()) {
-			for(String term : query.getQueryTerms()) {
-				queryTermsSet.addAll(tp.process(term));
-			}
+			queryTermsSet.addAll(query.getQueryTerms());
 		}
-
 		queryTerms.addAll(queryTermsSet);
-		System.out.println(queryTerms);
+//		System.out.println(queryTerms);
 
 		// Convert NewsArticle
 		Encoder<NewsArticleProcessed> newsArticleProcessedEncoder = Encoders.bean(NewsArticleProcessed.class);
@@ -129,5 +123,6 @@ public class AssessedExercise {
 
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
+
 
 }
