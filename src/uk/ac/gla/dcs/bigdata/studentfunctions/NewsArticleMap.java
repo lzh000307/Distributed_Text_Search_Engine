@@ -1,13 +1,17 @@
 package uk.ac.gla.dcs.bigdata.studentfunctions;
 
+import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.MapFunction;
+import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProcessed> {
 
@@ -28,7 +32,6 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         List<ContentItem> contents = value.getContents();
 //        String type = value.getType();
 //        String source = value.getSource();
-        // find the first 5 paragraphs of the article
 
         int articleLength = 0;
         int paragraphNum = 0;
@@ -51,6 +54,18 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         //for the title:
         List<String> titleProcessed = newsProcessor.process(title);
         articleLength += titleProcessed.size();
-        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength);
+
+        List<String> allWords = new ArrayList<>();
+        allWords.addAll(titleProcessed);
+        allWords.addAll(contentsProcessed);
+
+        // 统计单词频率
+        Map<String, Long> wordCount = new HashMap<>();
+        for(String word : allWords) {
+            wordCount.put(word, wordCount.getOrDefault(word, 0L) + 1);
+        }
+
+
+        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount);
     }
 }

@@ -5,6 +5,7 @@ import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 public class NewsArticleProcessed implements Serializable {
 
@@ -17,12 +18,22 @@ public class NewsArticleProcessed implements Serializable {
     private String type; //article type
     private String source; //article source
     private int articleLength; //article's length
+    private Map<String, Long> wordCount; //word frequency
 
-    public NewsArticleProcessed(String id, List<String> title, List<String> contents, int articleLength) {
+    public Map<String, Long> getWordCount() {
+        return wordCount;
+    }
+
+    public void setWordCount(Map<String, Long> wordCount) {
+        this.wordCount = wordCount;
+    }
+
+    public NewsArticleProcessed(String id, List<String> title, List<String> contents, int articleLength, Map<String, Long> wordCount) {
         this.id = id;
         this.title = title;
         this.contents = contents;
         this.articleLength = articleLength;
+        this.wordCount = wordCount;
     }
 
     public String getId() {

@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.spark.SparkConf;
+import org.apache.spark.api.java.function.FlatMapFunction;
+import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Encoders;
 
+import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
@@ -116,12 +119,17 @@ public class AssessedExercise {
 			queryTerms.addAll(queryTermsSet);
 //			System.out.println(queryTerms);
 
+
 			// Convert NewsArticle
+		//122648418750842
 
 		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(), Encoders.bean(NewsArticleProcessed.class));
+
+
 		
 		List<Query> eachQuery = queries.collectAsList();
 		for (int i=0; i<eachQuery.size(); i++) {
+			System.out.println(eachQuery.get(i).getOriginalQuery());
 			Dataset<PreDPHCurrentData> DPHCurrentScoreLis = newsArticleProcessed.map(new PreDPHCurrent(eachQuery.get(i).getOriginalQuery()), Encoders.bean(PreDPHCurrentData.class));
 			PreDPHCurrentData totalPreDPHinfo = DPHCurrentScoreLis.reduce(new PreDPHTotalReduce());
 			int totalTermFrequencyInCorpus = totalPreDPHinfo.getTermFrequencyInCurrentDocument();

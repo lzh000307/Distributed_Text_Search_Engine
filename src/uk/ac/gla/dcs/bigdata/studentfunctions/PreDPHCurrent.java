@@ -18,6 +18,7 @@ public class PreDPHCurrent implements MapFunction<NewsArticleProcessed,PreDPHCur
 	public PreDPHCurrent(String targetQuery) {
 		this.targetQuery = targetQuery;
 	}
+
     public static int countOccurrences(String text, String sub) {
         int count = 0;
         int fromIndex = 0;
@@ -35,9 +36,11 @@ public class PreDPHCurrent implements MapFunction<NewsArticleProcessed,PreDPHCur
 
         return count;
     }
-    
+
+	//
 	@Override
 	public PreDPHCurrentData call(NewsArticleProcessed value) throws Exception {
+		System.out.println(targetQuery);
 		List<String> contents = value.getContents();
 		int termFrequencyInCurrentDocument = 0;
 		int currentDocumentLength = 0;
