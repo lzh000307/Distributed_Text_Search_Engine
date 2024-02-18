@@ -1,5 +1,6 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
+import java.beans.Transient;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,6 +17,7 @@ import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
+import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentfunctions.NewsArticleMap;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 
@@ -91,28 +93,32 @@ public class AssessedExercise {
 	
 	
 	public static List<DocumentRanking> rankDocuments(SparkSession spark, String queryFile, String newsFile) {
-		
+
 		// Load queries and news articles
 		Dataset<Row> queriesjson = spark.read().text(queryFile);
 		Dataset<Row> newsjson = spark.read().text(newsFile); // read in files as string rows, one row per article
-		
+
 		// Perform an initial conversion from Dataset<Row> to Query and NewsArticle Java objects
 //		CollectionAccumulator<String> queryTermsAccumulator = spark.sparkContext().collectionAccumulator();
 		Dataset<Query> queries = queriesjson.map(new QueryFormaterMap(), Encoders.bean(Query.class)); // this converts each row into a Query
 		queries.show();
 		Dataset<NewsArticle> news = newsjson.map(new NewsFormaterMap(), Encoders.bean(NewsArticle.class)); // this converts each row into a NewsArticle
-		
+
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
 		// Convert Query
 		List<String> queryTerms = new ArrayList<>();
 		Set<String> queryTermsSet = new HashSet<>();
+		TextPreProcessor tp = new TextPreProcessor();
 		for(Query query : queries.collectAsList()) {
-			queryTermsSet.addAll(query.getQueryTerms());
+			for(String term : query.getQueryTerms()) {
+				queryTermsSet.addAll(tp.process(term));
+			}
 		}
+
 		queryTerms.addAll(queryTermsSet);
-//		System.out.println(queryTerms);
+		System.out.println(queryTerms);
 
 		// Convert NewsArticle
 		Encoder<NewsArticleProcessed> newsArticleProcessedEncoder = Encoders.bean(NewsArticleProcessed.class);
@@ -120,9 +126,8 @@ public class AssessedExercise {
 
 		//test the newsArticleProcessed
 		System.out.println(newsArticleProcessed.count());
-		
+
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
-	
-	
+
 }

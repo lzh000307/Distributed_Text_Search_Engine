@@ -12,14 +12,12 @@ import java.util.List;
 public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProcessed> {
 
     private transient TextPreProcessor newsProcessor;
-    private List<String> contentsProcessed = new ArrayList<String>();
+    private List<String> contentsProcessed;
 
-    public NewsArticleMap() {
-        newsProcessor = new TextPreProcessor();
-    }
     @Override
     public NewsArticleProcessed call(NewsArticle value) throws Exception {
         if(newsProcessor == null) newsProcessor = new TextPreProcessor();
+        contentsProcessed = new ArrayList<String>();
         String id = value.getId();
         String title = value.getTitle();
 //        String articleURL = value.getArticle_url();
