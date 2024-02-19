@@ -22,11 +22,12 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
     Broadcast<List<String>> broadcastedQueryTerms;
     private LongAccumulator totalArticlesAccumulator;
     private LongAccumulator totalLengthAccumulator;
-
-    public NewsArticleMap(Broadcast<List<String>> broadcastedQueryTerms, LongAccumulator totalArticles, LongAccumulator totalLength) {
+    private QueryTermFrequencyAccumulator queryTermFrequencyAccumulator;
+    public NewsArticleMap(Broadcast<List<String>> broadcastedQueryTerms, LongAccumulator totalArticles, LongAccumulator totalLength, QueryTermFrequencyAccumulator queryTermFrequencyAccumulator) {
         this.broadcastedQueryTerms = broadcastedQueryTerms;
         this.totalArticlesAccumulator = totalArticles;
         this.totalLengthAccumulator = totalLength;
+        this.queryTermFrequencyAccumulator = queryTermFrequencyAccumulator;
     }
 
     @Override
@@ -51,11 +52,11 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
             if(content.getSubtype() != null && content.getSubtype().equals("paragraph")) {
                 // check for and handle missing or null fields in the data.
                 if(content.getContent().isBlank()) {
-                    System.out.println();
+//                    System.out.println();
                     continue;
                 }
                 // only get the first 5 paragraphs
-                if(++paragraphNum == 5)
+                if(paragraphNum++ == 5)
                     break;
 //                System.out.println("Content: " + content.getContent());
                 contentsProcessed.addAll(newsProcessor.process(content.getContent()));
@@ -70,7 +71,7 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         allWords.addAll(titleProcessed);
         allWords.addAll(contentsProcessed);
 
-        // 统计单词频率
+        // Compute word count
         Map<String, Long> wordCount = new HashMap<>();
         for(String word : allWords) {
             wordCount.put(word, wordCount.getOrDefault(word, 0L) + 1);
@@ -82,15 +83,21 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
             Long count = wordCount.getOrDefault(term, 0L);
             queryTermFrequency.put(term, count);
         }
+        // if queryTermFrequency's key is empty, print it
+//        for(Map.Entry<String, Long> entry : queryTermFrequency.entrySet()) {
+//            if(entry.getValue() > 0) {
+////                System.out.println("Query Term Frequency: " + queryTermFrequency);
+////                System.out.println("articleLength: " + articleLength + " | title: " + value.getTitle());
+//            }
+//        }
 
 
-
-        // 更新累加器
+        // update accumulators
         totalArticlesAccumulator.add(1);
 //        System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
         totalLengthAccumulator.add(articleLength);
 //        System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
-
+        queryTermFrequencyAccumulator.add(queryTermFrequency);
 
 
         return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount, queryTermFrequency);

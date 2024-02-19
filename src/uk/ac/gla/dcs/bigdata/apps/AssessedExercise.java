@@ -124,6 +124,8 @@ public class AssessedExercise {
 		LongAccumulator totalArticlesAccumulator = sc.longAccumulator("Total Articles");
 		LongAccumulator totalLengthAccumulator = sc.longAccumulator("Total Article Length");
 
+		QueryTermFrequencyAccumulator queryTermFrequencyAccumulator = new QueryTermFrequencyAccumulator();
+		spark.sparkContext().register(queryTermFrequencyAccumulator, "Query Term Frequency");
 
 		List<String> allQueryTerms = queries.flatMap(
 				(FlatMapFunction<Query, String>) query -> query.getQueryTerms().iterator(),
@@ -136,13 +138,13 @@ public class AssessedExercise {
 		// Convert NewsArticle
 		//122648418750842
 
-		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator), Encoders.bean(NewsArticleProcessed.class));
+		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 
 		// execute the map function
-		newsArticleProcessed.show();
+		newsArticleProcessed.count();
 		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
 		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
-
+		System.out.println("Query Term Frequency: " + queryTermFrequencyAccumulator.value());
 
 
 		List<Query> eachQuery = queries.collectAsList();
@@ -156,7 +158,6 @@ public class AssessedExercise {
 //			Dataset<RankedResult> DPH = DPHCurrentScoreLis.map(new GetDPH(totalTermFrequencyInCorpus, averageDocumentLengthInCorpus, totalDocsInCorpus), Encoders.DOUBLE());
 //			DPH.show();
 		}
-
 
 
 		return null; // replace this with the the list of DocumentRanking output by your topology
