@@ -1,13 +1,11 @@
 package uk.ac.gla.dcs.bigdata.apps;
 
-import java.beans.Encoder;
 import java.io.File;
 import java.util.*;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
 import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
@@ -15,13 +13,12 @@ import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Encoders;
 
 import org.apache.spark.util.LongAccumulator;
-import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
-import uk.ac.gla.dcs.bigdata.studentstructures.PreDPHCurrentData;
+import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.studentfunctions.*;
 import uk.ac.gla.dcs.bigdata.studentstructures.*;
 
@@ -119,6 +116,9 @@ public class AssessedExercise {
 //			queryTerms.addAll(queryTermsSet);
 //			System.out.println(queryTerms);
 //		}
+
+
+
 		SparkContext sc = spark.sparkContext();
 
 		LongAccumulator totalArticlesAccumulator = sc.longAccumulator("Total Articles");
@@ -127,13 +127,21 @@ public class AssessedExercise {
 		QueryTermFrequencyAccumulator queryTermFrequencyAccumulator = new QueryTermFrequencyAccumulator();
 		spark.sparkContext().register(queryTermFrequencyAccumulator, "Query Term Frequency");
 
+
 		List<String> allQueryTerms = queries.flatMap(
 				(FlatMapFunction<Query, String>) query -> query.getQueryTerms().iterator(),
 				Encoders.STRING()
 		).collectAsList();
+
+		// convert Dataset<Query> quires to HashMap<String, List<String>> allQueryTerms
+		List<Query> queryList = queries.collectAsList();
+
+
 		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
-
-
+		final Broadcast<List<Query>> broadcastedQueryList = spark.sparkContext().broadcast(queryList, scala.reflect.ClassTag$.MODULE$.apply(List.class));
+		/**
+		 * Build the relationship between List<String> allQueryTerms and quires
+		 */
 
 		// Convert NewsArticle
 		//122648418750842
@@ -141,24 +149,63 @@ public class AssessedExercise {
 		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 
 		// execute the map function
+		// COUNT
 		newsArticleProcessed.count();
 		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
 		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
 		System.out.println("Query Term Frequency: " + queryTermFrequencyAccumulator.value());
-
-
-		List<Query> eachQuery = queries.collectAsList();
-		for (int i=0; i<eachQuery.size(); i++) {
-			System.out.println(eachQuery.get(i).getOriginalQuery());
-			Dataset<PreDPHCurrentData> DPHCurrentScoreLis = newsArticleProcessed.map(new PreDPHCurrent(eachQuery.get(i).getOriginalQuery()), Encoders.bean(PreDPHCurrentData.class));
-			PreDPHCurrentData totalPreDPHinfo = DPHCurrentScoreLis.reduce(new PreDPHTotalReduce());
-			int totalTermFrequencyInCorpus = totalPreDPHinfo.getTermFrequencyInCurrentDocument();
-			long totalDocsInCorpus = DPHCurrentScoreLis.count();
-			double averageDocumentLengthInCorpus = totalPreDPHinfo.getCurrentDocumentLength()/totalDocsInCorpus;
-//			Dataset<RankedResult> DPH = DPHCurrentScoreLis.map(new GetDPH(totalTermFrequencyInCorpus, averageDocumentLengthInCorpus, totalDocsInCorpus), Encoders.DOUBLE());
-//			DPH.show();
+		// Compute Query frequency
+		Map<String, Long> queryTermFrequency = queryTermFrequencyAccumulator.value();
+		/**
+		 * TODO: Convert to spark dataset
+		 * temp solution: for loop
+		 */
+//		List<QueryFrequency> queryFrequencyList = new ArrayList<>();
+		Map<String, Integer> queryFrequencyMap = new HashMap<>();
+		for(Query query : queryList) {
+			int count = 0;
+			Long count1 = 0L;
+			int numOfTerms = 0;
+			int length = query.getQueryTerms().size();
+			for(int i=0; i<length; i++) {
+				count1= queryTermFrequency.getOrDefault(query.getQueryTerms().get(i), 0L);
+				count += Long.valueOf(count1).intValue();
+				numOfTerms += query.getQueryTermCounts()[i];
+			}
+			if(count != 0) {
+//				QueryFrequency queryFrequency = new QueryFrequency(query.getOriginalQuery(), count/numOfTerms);
+				queryFrequencyMap.put(query.getOriginalQuery(), count);
+//				queryFrequencyMap.put(query.getOriginalQuery(), count/numOfTerms);
+			}
 		}
+		// Convert to spark dataset
+//		Dataset<QueryFrequency> queryFrequency = spark.createDataset(queryFrequencyList, Encoders.bean(QueryFrequency.class));
 
+
+
+		/**
+		 * Reduce newArticleProcessed, delete the articles that do not contain the query terms
+		 */
+		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = newsArticleProcessed.filter(newsArticleProcessed.col("hitQueryTerms").equalTo(true));
+		// COUNT
+		newsArticleProcessedFiltered.show();
+		/**
+		 * Calculate each query term's frequency in each article
+		 */
+		// Build the relationship between List<String> allQueryTerms and quires
+		Dataset<QueryWithArticle> queryWithArticle = newsArticleProcessedFiltered.flatMap(new QueryWithArticleMap(broadcastedQueryList), Encoders.bean(QueryWithArticle.class));
+		// COUNT
+//		queryWithArticle.count();
+		 queryWithArticle.count();
+
+		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
+		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
+		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
+		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+		//compute
+		Dataset<RankedResult> rankedResult = queryWithArticle.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryFrequencyMap), Encoders.bean(RankedResult.class));
+
+		rankedResult.show();
 
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}

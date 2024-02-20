@@ -1,14 +1,13 @@
 package uk.ac.gla.dcs.bigdata.studentfunctions;
 
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.util.LongAccumulator;
-import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedutilities.TextPreProcessor;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
+import uk.ac.gla.dcs.bigdata.studentstructures.QueryTermFrequencyAccumulator;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,6 +28,7 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         this.totalLengthAccumulator = totalLength;
         this.queryTermFrequencyAccumulator = queryTermFrequencyAccumulator;
     }
+    private boolean hitQueryTerms = false;
 
     @Override
     public NewsArticleProcessed call(NewsArticle value) throws Exception {
@@ -73,16 +73,28 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
 
         // Compute word count
         Map<String, Long> wordCount = new HashMap<>();
+        Map<String, Long> queryTermFrequency = new HashMap<>();
         for(String word : allWords) {
             wordCount.put(word, wordCount.getOrDefault(word, 0L) + 1);
         }
 
+        /**
+         * There are a lot of words, so we need to minimize the functions executed in the for loop,
+         * so we move the accumulator and queryTermFrequency to the later execution.
+         */
+
         // Compute term frequency for query terms
-        Map<String, Long> queryTermFrequency = new HashMap<>();
+        // CHECK if this article hit the query terms
+        hitQueryTerms = false; // reset the flag
+
         for (String term : broadcastedQueryTerms.value()) {
             Long count = wordCount.getOrDefault(term, 0L);
-            queryTermFrequency.put(term, count);
+            if(count > 0) {
+                queryTermFrequency.put(term, count);
+                hitQueryTerms = true;
+            }
         }
+
         // if queryTermFrequency's key is empty, print it
 //        for(Map.Entry<String, Long> entry : queryTermFrequency.entrySet()) {
 //            if(entry.getValue() > 0) {
@@ -100,6 +112,6 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         queryTermFrequencyAccumulator.add(queryTermFrequency);
 
 
-        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount, queryTermFrequency);
+        return new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount, queryTermFrequency, hitQueryTerms, value);
     }
 }

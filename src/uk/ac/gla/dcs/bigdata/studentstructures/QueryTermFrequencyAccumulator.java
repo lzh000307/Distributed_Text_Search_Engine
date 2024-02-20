@@ -1,9 +1,8 @@
-package uk.ac.gla.dcs.bigdata.studentfunctions;
+package uk.ac.gla.dcs.bigdata.studentstructures;
 
 import org.apache.spark.util.AccumulatorV2;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class QueryTermFrequencyAccumulator extends AccumulatorV2<Map<String, Long>, Map<String, Long>> {
     private Map<String, Long> termFrequency;
