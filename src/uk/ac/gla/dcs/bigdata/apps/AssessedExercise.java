@@ -22,6 +22,7 @@ import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.studentfunctions.*;
 import uk.ac.gla.dcs.bigdata.studentstructures.*;
 
+import static org.apache.spark.sql.functions.collect_list;
 
 
 /**
@@ -66,13 +67,19 @@ public class AssessedExercise {
 
 		// Get the location of the input news articles
 		String newsFile = System.getenv("bigdata.news");
-		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
+//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
+		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
 
+		long startTime = System.currentTimeMillis();
 		// Call the student's code
 		List<DocumentRanking> results = rankDocuments(spark, queryFile, newsFile);
 
+		long endTime = System.currentTimeMillis();
+		System.out.println("Time: " + (endTime - startTime) + "ms");
+
 		// Close the spark session
 		spark.close();
+
 
 		// Check if the code returned any results
 		if (results==null) System.err.println("Topology return no rankings, student code may not be implemented, skiping final write.");
@@ -189,6 +196,9 @@ public class AssessedExercise {
 		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = newsArticleProcessed.filter(newsArticleProcessed.col("hitQueryTerms").equalTo(true));
 		// COUNT
 		newsArticleProcessedFiltered.show();
+		//convert to list
+		List<NewsArticleProcessed> newsArticleProcessedList = newsArticleProcessedFiltered.collectAsList();
+
 		/**
 		 * Calculate each query term's frequency in each article
 		 */
@@ -196,16 +206,26 @@ public class AssessedExercise {
 		Dataset<QueryWithArticle> queryWithArticle = newsArticleProcessedFiltered.flatMap(new QueryWithArticleMap(broadcastedQueryList), Encoders.bean(QueryWithArticle.class));
 		// COUNT
 //		queryWithArticle.count();
-		 queryWithArticle.count();
+//		 queryWithArticle.count();
 
 		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
 		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
 		//compute
-		Dataset<RankedResult> rankedResult = queryWithArticle.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryFrequencyMap), Encoders.bean(RankedResult.class));
+		Dataset<ResultWithQuery> resultWithQueryDataset = queryWithArticle.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryFrequencyMap), Encoders.bean(ResultWithQuery.class));
+		// COUNT
 
-		rankedResult.show();
+
+
+		resultWithQueryDataset.show();
+		// group by query
+		Dataset<Row> documentRankingDataset = resultWithQueryDataset.groupBy("query").agg(collect_list("rankedResult").alias("collectedRankedResults"));
+
+
+
+//		Dataset<DocumentRanking> documentRankingDataset = resultWithQueryDataset.groupBy("query").agg(collect_list("rankedResult").as("rankedResults")).as(Encoders.bean(DocumentRanking.class));
+		documentRankingDataset.show();
 
 		return null; // replace this with the the list of DocumentRanking output by your topology
 	}

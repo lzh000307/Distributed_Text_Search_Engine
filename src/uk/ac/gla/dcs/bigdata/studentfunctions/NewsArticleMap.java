@@ -49,7 +49,7 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
         int paragraphNum = 0;
         for (ContentItem content : contents) {
             // if not null, get the subtype
-            if(content.getSubtype() != null && content.getSubtype().equals("paragraph")) {
+            if(content != null && content.getSubtype() != null && content.getSubtype().equals("paragraph")) {
                 // check for and handle missing or null fields in the data.
                 if(content.getContent().isBlank()) {
 //                    System.out.println();
