@@ -36,7 +36,7 @@ public class QueryWithArticleMap implements FlatMapFunction<NewsArticleProcessed
             if(count != 0){
                 short countShort = Long.valueOf(count).shortValue();
 //                short countShort = (short) (count/numOfTerms);
-                QueryWithArticle queryWithArticle = new QueryWithArticle(query.getOriginalQuery(), newsArticleProcessed, countShort);
+                QueryWithArticle queryWithArticle = new QueryWithArticle(query, newsArticleProcessed, countShort);
                 result.add(queryWithArticle);
             }
         }

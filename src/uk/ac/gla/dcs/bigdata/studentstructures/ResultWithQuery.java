@@ -1,16 +1,18 @@
 package uk.ac.gla.dcs.bigdata.studentstructures;
 
+import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 
 public class ResultWithQuery {
     private RankedResult rankedResult;
-    private String query;
+    private Query query;
 
-    public ResultWithQuery(RankedResult rankedResult, String query) {
+    public ResultWithQuery(RankedResult rankedResult, Query query) {
         this.rankedResult = rankedResult;
         this.query = query;
     }
-
+    public ResultWithQuery() {
+    }
     public RankedResult getRankedResult() {
         return rankedResult;
     }
@@ -19,11 +21,14 @@ public class ResultWithQuery {
         this.rankedResult = rankedResult;
     }
 
-    public String getQuery() {
+    public Query getQuery() {
         return query;
     }
 
-    public void setQuery(String query) {
+    public void setQuery(Query query) {
         this.query = query;
+    }
+    public double getScore() {
+        return this.rankedResult.getScore();
     }
 }
