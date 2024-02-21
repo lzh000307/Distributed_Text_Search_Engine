@@ -116,7 +116,9 @@ public class AssessedExercise {
 		Dataset<Row> newsjson = spark.read().text(newsFile); // read in files as string rows, one row per article
 
 		// Perform an initial conversion from Dataset<Row> to Query and NewsArticle Java objects
+//		CollectionAccumulator<String> queryTermsAccumulator = spark.sparkContext().collectionAccumulator();
 		Dataset<Query> queries = queriesjson.map(new QueryFormaterMap(), Encoders.bean(Query.class)); // this converts each row into a Query
+		queries.show();
 		Dataset<NewsArticle> news = newsjson.map(new NewsFormaterMap(), Encoders.bean(NewsArticle.class)); // this converts each row into a NewsArticle
 
 		//----------------------------------------------------------------
