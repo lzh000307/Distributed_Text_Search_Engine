@@ -5,6 +5,7 @@ import org.apache.spark.broadcast.Broadcast;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
+import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
 import uk.ac.gla.dcs.bigdata.studentstructures.QueryWithArticle;
 import uk.ac.gla.dcs.bigdata.studentstructures.ResultWithQuery;
 
@@ -27,7 +28,7 @@ public class DPHScoreMap implements FlatMapFunction<QueryWithArticle, ResultWith
     }
 
     @Override
-    public Iterator<ResultWithQuery> call(QueryWithArticle queryWithArticle) throws Exception {
+    public Iterator<ResultWithQuery> call(NewsArticleProcessed newsArticleProcessed) throws Exception {
         List<ResultWithQuery> result = new ArrayList<>();
         Long totalArticles = broadcastedTotalArticles.getValue();
         Long totalLength = broadcastedTotalLength.getValue();
@@ -44,8 +45,8 @@ public class DPHScoreMap implements FlatMapFunction<QueryWithArticle, ResultWith
 //        }
 //        score += Math.log(totalArticles / totalLength);
         //print all
-        score = DPHScorer.getDPHScore(queryWithArticle.getFrequency(),
-                queryFrequencyMap.get(queryWithArticle.getQuery()),
+        score = DPHScorer.getDPHScore(newsArticleProcessed.getFrequency(),
+                queryFrequencyMap.get(newsArticleProcessed.getQuery()),
                 queryWithArticle.getNewsArticleProcessed().getArticleLength(),
                 averageDocumentLengthInCorpus,
                 totalArticles);
