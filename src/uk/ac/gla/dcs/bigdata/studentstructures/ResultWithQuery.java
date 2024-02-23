@@ -11,6 +11,7 @@ public class ResultWithQuery {
         this.rankedResult = rankedResult;
         this.query = query;
     }
+
     public ResultWithQuery() {
     }
     public RankedResult getRankedResult() {
