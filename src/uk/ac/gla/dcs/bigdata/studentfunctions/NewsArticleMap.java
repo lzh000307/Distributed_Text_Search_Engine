@@ -94,6 +94,10 @@ public class NewsArticleMap implements MapFunction<NewsArticle, NewsArticleProce
                 hitQueryTerms = true;
             }
         }
+        // When pruning, we can also prune those with empty title
+        if(title == null || title.isBlank()) {
+            hitQueryTerms = false;
+        }
 
         // if queryTermFrequency's key is empty, print it
 //        for(Map.Entry<String, Long> entry : queryTermFrequency.entrySet()) {

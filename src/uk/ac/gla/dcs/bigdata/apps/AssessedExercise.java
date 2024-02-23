@@ -51,7 +51,7 @@ public class AssessedExercise {
 		// The code submitted for the assessed exerise may be run in either local or remote modes
 		// Configuration of this will be performed based on an environment variable
 		String sparkMasterDef = System.getenv("spark.master");
-		if (sparkMasterDef==null) sparkMasterDef = "local[2]"; // default is local mode with two executors
+		if (sparkMasterDef==null) sparkMasterDef = "local[1]"; // default is local mode with two executors
 
 		String sparkSessionName = "BigDataAE"; // give the session a name
 
@@ -73,8 +73,8 @@ public class AssessedExercise {
 
 		// Get the location of the input news articles
 		String newsFile = System.getenv("bigdata.news");
-//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
-		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
+		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
+//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
 
 		long startTime = System.currentTimeMillis();
 		// Call the student's code
@@ -163,38 +163,46 @@ public class AssessedExercise {
 		 */
 
 		// Convert NewsArticle
-		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
+//		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
+		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = news.flatMap(new NewsArticleFlatMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 
-		// execute the map function
 		// COUNT
-		newsArticleProcessed.count();
+		newsArticleProcessedFiltered.count();
+		newsArticleProcessedFiltered.cache(); // cache the dataset
+		// execute the map function
+
 //		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
 //		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
-//		System.out.println("Query Term Frequency: " + queryTermFrequencyAccumulator.value());
+//		System.out.println("Query Term Frequency 0: " + queryTermFrequencyAccumulator.value());
 		// Compute Query frequency
-		Map<String, Long> queryTermFrequency = queryTermFrequencyAccumulator.value();
+		Map<String, Long> queryTermFrequency = new HashMap<>();
+		queryTermFrequency.putAll(queryTermFrequencyAccumulator.value());
+		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
+//		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
+		System.out.println("queryTermFrequency: " + queryTermFrequency);
+
 		/**
 		 * TODO: Convert to spark dataset
 		 * temp solution: for loop
 		 */
 //		List<QueryFrequency> queryFrequencyList = new ArrayList<>();
-		Map<Query, Integer> queryFrequencyMap = new HashMap<>();
-		for(Query query : queryList) {
-			int count = 0;
-			Long count1 = 0L;
-			int numOfTerms = 0;
-			int length = query.getQueryTerms().size();
-			for(int i=0; i<length; i++) {
-				count1= queryTermFrequency.getOrDefault(query.getQueryTerms().get(i), 0L);
-				count += Long.valueOf(count1).intValue();
-				numOfTerms += query.getQueryTermCounts()[i];
-			}
-			if(count != 0) {
-//				QueryFrequency queryFrequency = new QueryFrequency(query.getOriginalQuery(), count/numOfTerms);
-				queryFrequencyMap.put(query, count);
-//				queryFrequencyMap.put(query.getOriginalQuery(), count/numOfTerms);
-			}
-		}
+//		Map<Query, Integer> queryFrequencyMap = new HashMap<>();
+//		for(Query query : queryList) {
+//			int count = 0;
+//			Long count1 = 0L;
+//			int numOfTerms = 0;
+//			int length = query.getQueryTerms().size();
+//			for(int i=0; i<length; i++) {
+//				count1= queryTermFrequency.getOrDefault(query.getQueryTerms().get(i), 0L);
+//				count += Long.valueOf(count1).intValue();
+//				numOfTerms += query.getQueryTermCounts()[i];
+//			}
+//			if(count != 0) {
+////				QueryFrequency queryFrequency = new QueryFrequency(query.getOriginalQuery(), count/numOfTerms);
+//				queryFrequencyMap.put(query, count);
+////				queryFrequencyMap.put(query.getOriginalQuery(), count/numOfTerms);
+//			}
+//		}
 		// Convert to spark dataset
 //		Dataset<QueryFrequency> queryFrequency = spark.createDataset(queryFrequencyList, Encoders.bean(QueryFrequency.class));
 
@@ -203,9 +211,12 @@ public class AssessedExercise {
 		/**
 		 * Reduce newArticleProcessed, delete the articles that do not contain the query terms
 		 */
-		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = newsArticleProcessed.filter(newsArticleProcessed.col("hitQueryTerms").equalTo(true));
+//		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = newsArticleProcessed.filter(newsArticleProcessed.col("hitQueryTerms").equalTo(true));
 		// COUNT
-		newsArticleProcessedFiltered.show();
+//		newsArticleProcessedFiltered.count();
+
+//		newsArticleProcessedFiltered.cache(); // cache the dataset
+		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
 		//convert to list
 //		List<NewsArticleProcessed> newsArticleProcessedList = newsArticleProcessedFiltered.collectAsList();
 
@@ -213,7 +224,7 @@ public class AssessedExercise {
 		 * Calculate each query term's frequency in each article
 		 */
 		// Build the relationship between List<String> allQueryTerms and quires
-		Dataset<QueryWithArticle> queryWithArticle = newsArticleProcessedFiltered.flatMap(new QueryWithArticleMap(broadcastedQueryList), Encoders.bean(QueryWithArticle.class));
+//		Dataset<QueryWithArticle> queryWithArticle = newsArticleProcessedFiltered.flatMap(new QueryWithArticleMap(broadcastedQueryList), Encoders.bean(QueryWithArticle.class));
 		// COUNT
 //		queryWithArticle.count();
 //		 queryWithArticle.count();
@@ -221,13 +232,27 @@ public class AssessedExercise {
 		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
 		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
-		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+//		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+		final Broadcast<Map> broadcastedQueryTermFrequencyMap = spark.sparkContext().broadcast(queryTermFrequency, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+
 		//compute
-		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryFrequencyMap), Encoders.bean(ResultWithQuery.class));
+		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryTermFrequencyMap, broadcastedQueryList), Encoders.bean(ResultWithQuery.class));
+		System.out.println("Query Term Frequency 1: " + queryTermFrequencyAccumulator.value());
+		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
+		System.out.println("queryTermFrequency: " + queryTermFrequency);
 		// execute the map function
 		resultWithQueryDataset.count();
+		resultWithQueryDataset.cache(); // cache the dataset
+		// print queryTermFrequency accumulator
+		System.out.println("Query Term Frequency 2: " + queryTermFrequencyAccumulator.value());
+		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
+		System.out.println("queryTermFrequency: " + queryTermFrequency);
 		// convert to list
 		List<ResultWithQuery> resultWithQueryList = resultWithQueryDataset.collectAsList();
+		System.out.println("Query Term Frequency 3: " + queryTermFrequencyAccumulator.value());
+		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
+		System.out.println("queryTermFrequency: " + queryTermFrequency);
+
 		// convert to DocumentRanking
 		Map<Query, List<RankedResult>> resultMap = new HashMap<>();
 		for(ResultWithQuery resultWithQuery : resultWithQueryList) {
@@ -256,32 +281,44 @@ public class AssessedExercise {
 		// compare similarity and find the top 10
 		// new a output list
 		List<DocumentRanking> output = new ArrayList<>();
+		int diffrernce = 0; // the difference between the two documents rank
 		for(DocumentRanking ranking : documentRankings){
 			int resultNum = 0;
 			int loopLength = ranking.getResults().size();
 			// for speed up
 			List<RankedResult> rr = ranking.getResults();
 			List<RankedResult> newRR = new ArrayList<>();
+			/**
+			 *  As a final stage, the ranking of documents for each query should be analysed to remove unneeded redundancy
+			 *  (near duplicate documents), if any pairs of documents are found where their titles have a textual distance
+			 *  (using a comparison function provided) less than 0.5 then you should only keep the most relevant of them
+			 *  (based on the DPH score). Note that there should be 10 documents returned for each query, even after
+			 *  redundancy filtering.
+			 */
+
 			for(int i = 0; i < loopLength - 1; i++){
-				if(resultNum >= 10)
+				if(newRR.size() == 10)
 					break;
 				// not enough 10 results
 				// compare similarity
-				/**
-				 *
-				 */
+				// current document title is t1
 				String t1 = rr.get(i).getArticle().getTitle();
-				String t2 = rr.get(i+1).getArticle().getTitle();
-				newRR.add(rr.get(i));
-				resultNum++;
-				if(t1 != null && t2 != null) {
-					double distance = TextDistanceCalculator.similarity(t1, t2);
+				boolean similarityFlag = false;
+				// compare with previous documents
+				for(RankedResult newRRInstance : newRR){
+					double distance = TextDistanceCalculator.similarity(t1, newRRInstance.getArticle().getTitle());
 					if (distance < 0.5) {
-						i++; // skip the next one
+						similarityFlag = true;
+						break;
 					}
 				}
-
+				if(similarityFlag){
+					continue;
+				}
+				//if not similar to any pairs of documents
+				newRR.add(rr.get(i));
 			}
+
 			if(rr.size() < 10){
 				System.out.println("WARNING: Query " + ranking.getQuery().getOriginalQuery() + " has less than 10 results");
 				//TODO: add more results

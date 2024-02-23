@@ -3,8 +3,10 @@ package uk.ac.gla.dcs.bigdata.studentstructures;
 import org.apache.hadoop.fs.shell.Count;
 import uk.ac.gla.dcs.bigdata.providedstructures.ContentItem;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
+import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -15,9 +17,12 @@ public class NewsArticleProcessed implements Serializable {
     private  List<String> contents; //article contents
     private int articleLength; //article's length
     private Map<String, Long> wordCount; //word frequency
+    private Query query;
     private Map<String, Long> queryTermFrequency; //query term frequency
     private boolean hitQueryTerms; //whether the article contains the query terms
     private NewsArticle newsArticle;
+
+//    private Map<String, Long> queryFrequencyMap;
 
     public boolean isHitQueryTerms() {
         return hitQueryTerms;
@@ -54,9 +59,13 @@ public class NewsArticleProcessed implements Serializable {
         this.queryTermFrequency = queryTermFrequency;
         this.hitQueryTerms = hitQueryTerms;
         this.newsArticle = newsArticle;
-
     }
 
+//    private transferQueryTermFrequency2QueryFrequencyMap() {
+//        this.queryFrequencyMap = new HashMap<>();
+//
+//        return queryFrequencyMap;
+//    }
 
     public String getId() {
         return id;

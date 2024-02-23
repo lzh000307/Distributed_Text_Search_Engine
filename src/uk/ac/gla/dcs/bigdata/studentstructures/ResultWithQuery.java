@@ -6,11 +6,16 @@ import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 public class ResultWithQuery {
     private RankedResult rankedResult;
     private Query query;
+//    private String queryTerm; //query term
 
     public ResultWithQuery(RankedResult rankedResult, Query query) {
         this.rankedResult = rankedResult;
         this.query = query;
     }
+//    public ResultWithQuery(RankedResult rankedResult, String queryTerm) {
+//        this.rankedResult = rankedResult;
+//        this.queryTerm = queryTerm;
+//    }
     public ResultWithQuery() {
     }
     public RankedResult getRankedResult() {

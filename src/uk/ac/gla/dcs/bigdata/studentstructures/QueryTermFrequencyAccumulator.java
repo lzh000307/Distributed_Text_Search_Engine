@@ -26,6 +26,8 @@ public class QueryTermFrequencyAccumulator extends AccumulatorV2<Map<String, Lon
     @Override
     public void reset() {
         termFrequency.clear();
+//        termFrequency = new HashMap<>();
+//        System.out.println("CLEAR: termFrequency: " + termFrequency);
     }
 
     @Override
@@ -34,6 +36,7 @@ public class QueryTermFrequencyAccumulator extends AccumulatorV2<Map<String, Lon
         for (Map.Entry<String, Long> entry : v.entrySet()) {
             if(entry.getValue() != 0L) {
                 termFrequency.merge(entry.getKey(), entry.getValue(), Long::sum); // merge the value of the same key
+//                System.out.println("Key: " + entry.getKey() + " Value: " + entry.getValue() + " termFrequency: " + termFrequency.get(entry.getKey()));
             }
 //            termFrequency.merge(entry.getKey(), entry.getValue(), Long::sum);
         }
@@ -44,6 +47,7 @@ public class QueryTermFrequencyAccumulator extends AccumulatorV2<Map<String, Lon
         if (other instanceof QueryTermFrequencyAccumulator) {
             for (Map.Entry<String, Long> entry : other.value().entrySet()) {
                 termFrequency.merge(entry.getKey(), entry.getValue(), Long::sum);
+//                System.out.println("MERGE: " + termFrequency);
             }
         }
     }
