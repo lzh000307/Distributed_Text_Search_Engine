@@ -15,6 +15,7 @@ import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.*;
 
 
+import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.util.LongAccumulator;
 import org.codehaus.jackson.map.type.CollectionType;
 import scala.Tuple2;
@@ -73,8 +74,8 @@ public class AssessedExercise {
 
 		// Get the location of the input news articles
 		String newsFile = System.getenv("bigdata.news");
-		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
-//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
+//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
+		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
 
 		long startTime = System.currentTimeMillis();
 		// Call the student's code
@@ -86,6 +87,12 @@ public class AssessedExercise {
 		//Spark runtime: 68245 ms (1.1374166666666667min)
 
 		// Close the spark session
+		//keep spark open and wait for the user to press enter
+		Scanner scanner = new Scanner(System.in);
+		System.out.println("Press enter to close the spark session");
+		scanner.nextLine();
+
+
 		spark.close();
 
 
@@ -123,17 +130,6 @@ public class AssessedExercise {
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
 		// Convert Query
-//		List<String> queryTerms = new ArrayList<>();
-//		Set<String> queryTermsSet = new HashSet<>();
-//		for(Query query : queries.collectAsList()) {
-//			queryTermsSet.addAll(query.getQueryTerms());
-//		}
-//			queryTerms.addAll(queryTermsSet);
-//			System.out.println(queryTerms);
-//		}
-
-
-
 		SparkContext sc = spark.sparkContext();
 
 		LongAccumulator totalArticlesAccumulator = sc.longAccumulator("Total Articles");
@@ -154,21 +150,15 @@ public class AssessedExercise {
 
 		List<Query> queryList = queries.collectAsList();
 		MyQueries myQueries = new MyQueries(queryList);
-
-
 		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
 		final Broadcast<List<Query>> broadcastedQueryList = spark.sparkContext().broadcast(queryList, scala.reflect.ClassTag$.MODULE$.apply(List.class));
-		/**
-		 * Build the relationship between List<String> allQueryTerms and quires
-		 */
-
 		// Convert NewsArticle
 //		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = news.flatMap(new NewsArticleFlatMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 
 		// COUNT
 		newsArticleProcessedFiltered.count();
-		newsArticleProcessedFiltered.cache(); // cache the dataset
+		newsArticleProcessedFiltered.persist(StorageLevel.MEMORY_AND_DISK()); // cache the dataset
 		// execute the map function
 
 //		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
@@ -178,57 +168,9 @@ public class AssessedExercise {
 		Map<String, Long> queryTermFrequency = new HashMap<>();
 		queryTermFrequency.putAll(queryTermFrequencyAccumulator.value());
 		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
-//		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
 		System.out.println("queryTermFrequency: " + queryTermFrequency);
-
-		/**
-		 * TODO: Convert to spark dataset
-		 * temp solution: for loop
-		 */
-//		List<QueryFrequency> queryFrequencyList = new ArrayList<>();
-//		Map<Query, Integer> queryFrequencyMap = new HashMap<>();
-//		for(Query query : queryList) {
-//			int count = 0;
-//			Long count1 = 0L;
-//			int numOfTerms = 0;
-//			int length = query.getQueryTerms().size();
-//			for(int i=0; i<length; i++) {
-//				count1= queryTermFrequency.getOrDefault(query.getQueryTerms().get(i), 0L);
-//				count += Long.valueOf(count1).intValue();
-//				numOfTerms += query.getQueryTermCounts()[i];
-//			}
-//			if(count != 0) {
-////				QueryFrequency queryFrequency = new QueryFrequency(query.getOriginalQuery(), count/numOfTerms);
-//				queryFrequencyMap.put(query, count);
-////				queryFrequencyMap.put(query.getOriginalQuery(), count/numOfTerms);
-//			}
-//		}
-		// Convert to spark dataset
-//		Dataset<QueryFrequency> queryFrequency = spark.createDataset(queryFrequencyList, Encoders.bean(QueryFrequency.class));
-
-
-
-		/**
-		 * Reduce newArticleProcessed, delete the articles that do not contain the query terms
-		 */
-//		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = newsArticleProcessed.filter(newsArticleProcessed.col("hitQueryTerms").equalTo(true));
-		// COUNT
-//		newsArticleProcessedFiltered.count();
-
-//		newsArticleProcessedFiltered.cache(); // cache the dataset
 		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
 		//convert to list
-//		List<NewsArticleProcessed> newsArticleProcessedList = newsArticleProcessedFiltered.collectAsList();
-
-		/**
-		 * Calculate each query term's frequency in each article
-		 */
-		// Build the relationship between List<String> allQueryTerms and quires
-//		Dataset<QueryWithArticle> queryWithArticle = newsArticleProcessedFiltered.flatMap(new QueryWithArticleMap(broadcastedQueryList), Encoders.bean(QueryWithArticle.class));
-		// COUNT
-//		queryWithArticle.count();
-//		 queryWithArticle.count();
-
 		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
 		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
@@ -237,22 +179,11 @@ public class AssessedExercise {
 
 		//compute
 		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryTermFrequencyMap, broadcastedQueryList), Encoders.bean(ResultWithQuery.class));
-		System.out.println("Query Term Frequency 1: " + queryTermFrequencyAccumulator.value());
-		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
-		System.out.println("queryTermFrequency: " + queryTermFrequency);
 		// execute the map function
 		resultWithQueryDataset.count();
-		resultWithQueryDataset.cache(); // cache the dataset
 		// print queryTermFrequency accumulator
-		System.out.println("Query Term Frequency 2: " + queryTermFrequencyAccumulator.value());
-		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
-		System.out.println("queryTermFrequency: " + queryTermFrequency);
 		// convert to list
-		List<ResultWithQuery> resultWithQueryList = resultWithQueryDataset.collectAsList();
-		System.out.println("Query Term Frequency 3: " + queryTermFrequencyAccumulator.value());
-		System.out.println("broadcastedQueryTermFrequencyMap: " + broadcastedQueryTermFrequencyMap.value());
-		System.out.println("queryTermFrequency: " + queryTermFrequency);
-
+		List<ResultWithQuery> resultWithQueryList = resultWithQueryDataset.collectAsList();;
 		// convert to DocumentRanking
 		Map<Query, List<RankedResult>> resultMap = new HashMap<>();
 		for(ResultWithQuery resultWithQuery : resultWithQueryList) {
@@ -318,139 +249,12 @@ public class AssessedExercise {
 				//if not similar to any pairs of documents
 				newRR.add(rr.get(i));
 			}
-
-			if(rr.size() < 10){
-				System.out.println("WARNING: Query " + ranking.getQuery().getOriginalQuery() + " has less than 10 results");
-				//TODO: add more results
-			}
+//			if(rr.size() < 10){
+//				System.out.println("WARNING: Query " + ranking.getQuery().getOriginalQuery() + " has less than 10 results");
+//				// no need to add more results
+//			}
 			output.add(new DocumentRanking(ranking.getQuery(), newRR));
 		}
 		return output;
-
-
-
-
-
-
-
-//		// 使用groupByKey对resultWithQueryDataset按Query进行分组
-//		JavaPairRDD<Query, Iterable<RankedResult>> groupedResults = resultWithQueryDataset
-//				.toJavaRDD() // 转换为JavaRDD
-//				.mapToPair(resultWithQuery -> new Tuple2<>(resultWithQuery.getQuery(), resultWithQuery.getRankedResult())) // 将Dataset转换为键值对RDD
-//				.groupByKey(); // 按键（Query）进行分组
-//
-//		// 将每个组转换为DocumentRanking对象
-//		JavaRDD<DocumentRanking> documentRankingsRDD = groupedResults.map(
-//				new org.apache.spark.api.java.function.Function<Tuple2<Query, Iterable<RankedResult>>, DocumentRanking>() {
-//					public DocumentRanking call(Tuple2<Query, Iterable<RankedResult>> queryAndResults) throws Exception {
-//						List<RankedResult> resultsList = new ArrayList<>();
-//						queryAndResults._2().forEach(resultsList::add);
-//						return new DocumentRanking(queryAndResults._1(), resultsList);
-//					}
-//				});
-//		documentRankingsRDD.count();
-//
-////		// 将JavaRDD<DocumentRanking>转换为List<DocumentRanking>以返回
-//		List<DocumentRanking> documentRankings = documentRankingsRDD.collect();
-//		for(int i=0; i<10; i++) {
-//			System.out.println("DocumentRanking: " + documentRankings.get(1).getQuery().getOriginalQuery() + " " + documentRankings.get(0).getResults().get(i).getScore());
-//		}
-//		//
-//
-//		SimilarityFilter filter = new SimilarityFilter();
-//		List<DocumentRanking> filteredRankings = new ArrayList<>();
-//		for (DocumentRanking ranking : documentRankings) {
-//			try {
-//				DocumentRanking filteredRanking = filter.call(ranking);
-//				System.out.println("Query: " + ranking.getQuery().getOriginalQuery() + " - Initial Results: " + ranking.getResults().size());
-//				List<RankedResult> topResults = filteredRanking.getResults().stream()
-//						.sorted(Comparator.comparing(RankedResult::getScore).reversed()) // Sort by score in descending order
-//						.limit(10) // Limit to top 10
-//						.collect(Collectors.toList());
-//
-//				DocumentRanking finalRanking = new DocumentRanking(filteredRanking.getQuery(), topResults);
-//				filteredRankings.add(filteredRanking);
-//				System.out.println("Query: " + finalRanking.getQuery().getOriginalQuery() + " - Filtered Results: " + finalRanking.getResults().size());
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//
-//		// Print the filtered rankings
-//		for (DocumentRanking ranking : filteredRankings) {
-//			System.out.println("Query: " + ranking.getQuery().getOriginalQuery());
-//			for (RankedResult result : ranking.getResults()) {
-//				System.out.println("\t" + result.getArticle().getTitle() + " - Score: " + result.getScore());
-//			}
-//		}
-//		return null;
-
-
-
-//		// group by query
-//		Dataset<Row> sortedDataset = resultWithQueryDataset
-//				.groupBy("query") // 根据query分组
-//				.agg(collect_list(struct(col("rankedResult"), col("rankedResult.score").alias("score"))).alias("results")) // 收集每个query的RankedResult列表
-//				.withColumn("sortedResults", sort_array(col("results"), false)) // 对每个列表按score降序排列
-//				.select(col("query"), col("sortedResults.rankedResult").alias("sortedRankedResults")); // 选择并重命名列
-//		List<Row> sortedList = sortedDataset.collectAsList();
-//		Map<String, List<RankedResult>> resultMap = new HashMap<>();
-//
-//		for (Row row : sortedList) {
-//			String query = row.getString(0); // 获取query值
-//			List<Row> rankedResultsRows = row.getList(1); // 获取对应的RankedResult列表
-//
-//			List<RankedResult> rankedResults = new ArrayList<>();
-//			for (Row rankedResultRow : rankedResultsRows) {
-//				String docid = rankedResultRow.getAs("docid");
-//				double score = rankedResultRow.getAs("score");
-//				NewsArticle article = rankedResultRow.getAs("article");
-//				// 然后使用这些字段值创建RankedResult实例
-//				RankedResult rankedResult = new RankedResult(docid, article, score); // 根据你的实际构造函数调整这里
-//				rankedResults.add(rankedResult);
-//			}
-//
-//			resultMap.put(query, rankedResults);
-//			System.out.println(query + " " + rankedResults.size() + " " + rankedResults.get(0).getScore());
-//		}
-
-
-
-
-//		resultWithQueryDataset.show();
-		// group by query
-//		Dataset<Row> df = resultWithQueryDataset.toDF();
-//		Dataset<Row> grouped = df.groupBy("query").agg(collect_list("rankedResult").alias("collectedRankedResults"));
-//
-//		Dataset<ResultList> finalResults = grouped.map(
-//				(MapFunction<Row, ResultList>) row -> {
-//					List<RankedResult> rankedResults = row.getList(row.fieldIndex("collectedRankedResults"));
-//					System.out.println(row.getString(0));
-//					ResultList aggregate = new ResultList(row.getString(0), row.getList(1));
-//					return aggregate;
-//				},
-//				Encoders.bean(ResultList.class)
-//		);
-//		finalResults.count();
-//		List<ResultList> fr = finalResults.collectAsList();
-//		System.out.println(fr.get(0).getRankedResultList());
-
-
-//		Dataset<Row> df = resultWithQueryDataset.toDF();
-//		Dataset<Row> documentRankingDataset = resultWithQueryDataset.groupBy("query").agg(collect_list("rankedResult").alias("collectedRankedResults"));
-//		//		Dataset<DocumentRanking> documentRankingDataset = resultWithQueryDataset.groupBy("query").agg(collect_list("rankedResult").as("rankedResults")).as(Encoders.bean(DocumentRanking.class));
-//		//		documentRankingDataset.show();
-//
-//		// convert to dataset
-//		Encoder<ResultList> encoder = Encoders.bean(ResultList.class);
-//		Dataset<ResultList> aggregatedDataset = documentRankingDataset.map(row -> {
-//			String query = row.getAs("query");
-//			List<RankedResult> collectedRankedResults = row.getList(row.fieldIndex("collectedRankedResults"));
-//			// 假设你有一个接收这些参数的构造函数或者一个方法来设置它们
-//			return new ResultList(query, collectedRankedResults);
-//		}, encoder);
-
-
-//		return null; // replace this with the the list of DocumentRanking output by your topology
 	}
 }

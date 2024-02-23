@@ -85,16 +85,24 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
                     averageDocumentLengthInCorpus,
                     totalDocsInCorpus);
             scores.put(queryTerm, score);
-//            if(nap.getId().equals("985fe83c-45dd-11e1-b0ef-752cfddb1b51")){
-//                System.out.println("queryTerm: " + queryTerm);
-//                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
-//                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
-//                System.out.println("articleLength: " + nap.getArticleLength());
-//                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
-//                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
-//                System.out.println("score: " + score);
-//
-//            }
+            if(nap.getId().equals("8c54645a-4de4-11e1-970f-5aedabc3a02c")){
+                System.out.println("queryTerm: " + queryTerm);
+                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
+                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
+                System.out.println("articleLength: " + nap.getArticleLength());
+                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
+                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
+                System.out.println("score: " + score);
+            }
+            if(nap.getId().equals("5dbbd4e0-5297-11e1-bd4f-8a7d53f6d6c2")){
+                System.out.println("queryTerm: " + queryTerm);
+                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
+                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
+                System.out.println("articleLength: " + nap.getArticleLength());
+                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
+                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
+                System.out.println("score: " + score);
+            }
         }
 //        if(nap.getId().equals("985fe83c-45dd-11e1-b0ef-752cfddb1b51")){
 //            System.out.println("Fannie and Freddie don’t deserve blame for bubble");
