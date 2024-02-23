@@ -79,7 +79,7 @@ public class NewsArticleFlatMap implements FlatMapFunction<NewsArticle, NewsArti
             return Collections.emptyIterator();
         }
 
-        NewsArticleProcessed processedArticle = new NewsArticleProcessed(id, titleProcessed, contentsProcessed, articleLength, wordCount, queryTermFrequency, hitQueryTerms, value);
+        NewsArticleProcessed processedArticle = new NewsArticleProcessed(id, articleLength, queryTermFrequency, value);
         return Collections.singleton(processedArticle).iterator();
     }
 }

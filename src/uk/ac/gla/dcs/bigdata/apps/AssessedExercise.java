@@ -52,7 +52,7 @@ public class AssessedExercise {
 		// The code submitted for the assessed exerise may be run in either local or remote modes
 		// Configuration of this will be performed based on an environment variable
 		String sparkMasterDef = System.getenv("spark.master");
-		if (sparkMasterDef==null) sparkMasterDef = "local[1]"; // default is local mode with two executors
+		if (sparkMasterDef==null) sparkMasterDef = "local[2]"; // default is local mode with two executors
 
 		String sparkSessionName = "BigDataAE"; // give the session a name
 
@@ -158,7 +158,7 @@ public class AssessedExercise {
 
 		// COUNT
 		newsArticleProcessedFiltered.count();
-		newsArticleProcessedFiltered.persist(StorageLevel.MEMORY_AND_DISK()); // cache the dataset
+//		newsArticleProcessedFiltered.cache(); // cache the dataset
 		// execute the map function
 
 //		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
@@ -180,7 +180,7 @@ public class AssessedExercise {
 		//compute
 		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryTermFrequencyMap, broadcastedQueryList), Encoders.bean(ResultWithQuery.class));
 		// execute the map function
-		resultWithQueryDataset.count();
+//		resultWithQueryDataset.count();
 		// print queryTermFrequency accumulator
 		// convert to list
 		List<ResultWithQuery> resultWithQueryList = resultWithQueryDataset.collectAsList();
