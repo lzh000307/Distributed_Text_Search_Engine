@@ -67,8 +67,8 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
      */
     private Map<String, Double> calDPHScore(NewsArticleProcessed nap){
         Long totalDocsInCorpus = broadcastedTotalArticles.getValue();
-        Long currentDocumentLength = broadcastedTotalLength.getValue();
-        double averageDocumentLengthInCorpus = currentDocumentLength / totalDocsInCorpus;
+        Long totalDocumentLength = broadcastedTotalLength.getValue();
+        double averageDocumentLengthInCorpus = (double)totalDocumentLength / (double)totalDocsInCorpus;
         Map<String, Long> totalTermFrequencyInCorpusMap = broadcastedQueryTermFrequencyMap.getValue();
 //        System.out.println("totalTermFrequencyInCorpusMap: " + totalTermFrequencyInCorpusMap);
         Map<String, Double> scores = new HashMap<>();
@@ -87,7 +87,9 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
 //            if(nap.getId().equals("8c54645a-4de4-11e1-970f-5aedabc3a02c")){
 //                System.out.println("queryTerm: " + queryTerm);
 //                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
+//                System.out.println("termFrequencyInCurrentDocumentLong: " + termFrequencyInCurrentDocumentMap.get(queryTerm));
 //                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
+//                System.out.println("totalTermFrequencyInCorpusLong: " + totalTermFrequencyInCorpusMap.get(queryTerm));
 //                System.out.println("articleLength: " + nap.getArticleLength());
 //                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
 //                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
@@ -96,7 +98,9 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
 //            if(nap.getId().equals("5dbbd4e0-5297-11e1-bd4f-8a7d53f6d6c2")){
 //                System.out.println("queryTerm: " + queryTerm);
 //                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
+//                System.out.println("termFrequencyInCurrentDocumentLong: " + termFrequencyInCurrentDocumentMap.get(queryTerm));
 //                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
+//                System.out.println("totalTermFrequencyInCorpusLong: " + totalTermFrequencyInCorpusMap.get(queryTerm));
 //                System.out.println("articleLength: " + nap.getArticleLength());
 //                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
 //                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);

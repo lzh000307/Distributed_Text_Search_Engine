@@ -63,8 +63,8 @@ public class AssessedExercise {
 
 		// Get the location of the input news articles
 		String newsFile = System.getenv("bigdata.news");
-//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
-		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
+		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v3.example.json"; // default is a sample of 5000 news articles
+//		if (newsFile==null) newsFile = "data/TREC_Washington_Post_collection.v2.jl.fix.json";
 
 		long startTime = System.currentTimeMillis();
 		// Call the student's code
@@ -153,9 +153,9 @@ public class AssessedExercise {
 		newsArticleProcessedFiltered.cache(); // cache the dataset
 		// execute the map function
 
-//		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
-//		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
-//		System.out.println("Query Term Frequency 0: " + queryTermFrequencyAccumulator.value());
+		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
+		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
+		System.out.println("Query Term Frequency 0: " + queryTermFrequencyAccumulator.value());
 		// Compute Query frequency
 		Map<String, Long> queryTermFrequency = new HashMap<>();
 		queryTermFrequency.putAll(queryTermFrequencyAccumulator.value());
