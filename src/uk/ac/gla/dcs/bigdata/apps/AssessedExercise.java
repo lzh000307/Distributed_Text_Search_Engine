@@ -2,30 +2,19 @@ package uk.ac.gla.dcs.bigdata.apps;
 
 import java.io.File;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.spark.SparkConf;
 import org.apache.spark.SparkContext;
-import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.function.FlatMapFunction;
-import org.apache.spark.api.java.function.FlatMapGroupsFunction;
-import org.apache.spark.api.java.function.MapFunction;
 import org.apache.spark.broadcast.Broadcast;
 import org.apache.spark.sql.*;
 
-
-import org.apache.spark.storage.StorageLevel;
 import org.apache.spark.util.LongAccumulator;
-import org.codehaus.jackson.map.type.CollectionType;
-import scala.Tuple2;
 import uk.ac.gla.dcs.bigdata.providedfunctions.NewsFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedfunctions.QueryFormaterMap;
 import uk.ac.gla.dcs.bigdata.providedstructures.DocumentRanking;
 import uk.ac.gla.dcs.bigdata.providedstructures.NewsArticle;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
-import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
-import uk.ac.gla.dcs.bigdata.providedutilities.TextDistanceCalculator;
 import uk.ac.gla.dcs.bigdata.studentfunctions.*;
 import uk.ac.gla.dcs.bigdata.studentstructures.*;
 
@@ -52,7 +41,7 @@ public class AssessedExercise {
 		// The code submitted for the assessed exerise may be run in either local or remote modes
 		// Configuration of this will be performed based on an environment variable
 		String sparkMasterDef = System.getenv("spark.master");
-		if (sparkMasterDef==null) sparkMasterDef = "local[2]"; // default is local mode with two executors
+		if (sparkMasterDef==null) sparkMasterDef = "local[8]"; // default is local mode with two executors
 
 		String sparkSessionName = "BigDataAE"; // give the session a name
 
@@ -125,7 +114,7 @@ public class AssessedExercise {
 		// Perform an initial conversion from Dataset<Row> to Query and NewsArticle Java objects
 //		CollectionAccumulator<String> queryTermsAccumulator = spark.sparkContext().collectionAccumulator();
 		Dataset<Query> queries = queriesjson.map(new QueryFormaterMap(), Encoders.bean(Query.class)); // this converts each row into a Query
-		queries.show();
+//		queries.show();
 		Dataset<NewsArticle> news = newsjson.map(new NewsFormaterMap(), Encoders.bean(NewsArticle.class)); // this converts each row into a NewsArticle
 
 		//----------------------------------------------------------------
@@ -160,7 +149,8 @@ public class AssessedExercise {
 
 		// COUNT
 		newsArticleProcessedFiltered.count();
-//		newsArticleProcessedFiltered.cache(); // cache the dataset
+//		List<NewsArticleProcessed> nap = newsArticleProcessedFiltered.collectAsList();
+		newsArticleProcessedFiltered.cache(); // cache the dataset
 		// execute the map function
 
 //		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
@@ -169,9 +159,9 @@ public class AssessedExercise {
 		// Compute Query frequency
 		Map<String, Long> queryTermFrequency = new HashMap<>();
 		queryTermFrequency.putAll(queryTermFrequencyAccumulator.value());
-		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
-		System.out.println("queryTermFrequency: " + queryTermFrequency);
-		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
+//		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
+//		System.out.println("queryTermFrequency: " + queryTermFrequency);
+//		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
 		//convert to list
 		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
 		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));

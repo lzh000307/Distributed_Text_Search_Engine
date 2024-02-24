@@ -28,6 +28,7 @@ public class NewsArticleFlatMap implements FlatMapFunction<NewsArticle, NewsArti
 
     @Override
     public Iterator<NewsArticleProcessed> call(NewsArticle value) throws Exception {
+        List<NewsArticleProcessed> result = new ArrayList<>();
         if (newsProcessor == null) {
             newsProcessor = new TextPreProcessor();
         }
@@ -76,10 +77,11 @@ public class NewsArticleFlatMap implements FlatMapFunction<NewsArticle, NewsArti
         queryTermFrequencyAccumulator.add(queryTermFrequency);
 
         if (title == null || title.isBlank() || !hitQueryTerms) {
-            return Collections.emptyIterator();
+            return result.iterator();
         }
 
         NewsArticleProcessed processedArticle = new NewsArticleProcessed(id, articleLength, queryTermFrequency, value);
-        return Collections.singleton(processedArticle).iterator();
+        result.add(processedArticle);
+        return result.iterator();
     }
 }

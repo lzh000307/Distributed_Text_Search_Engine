@@ -3,7 +3,10 @@ package uk.ac.gla.dcs.bigdata.studentstructures;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 
-public class ResultWithQuery {
+import java.io.Serializable;
+
+public class ResultWithQuery implements Serializable {
+
     private RankedResult rankedResult;
     private Query query;
 

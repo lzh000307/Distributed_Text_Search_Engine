@@ -7,7 +7,6 @@ import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
 import uk.ac.gla.dcs.bigdata.studentstructures.NewsArticleProcessed;
-import uk.ac.gla.dcs.bigdata.studentstructures.QueryWithArticle;
 import uk.ac.gla.dcs.bigdata.studentstructures.ResultWithQuery;
 
 import java.util.*;
@@ -73,7 +72,7 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
         Map<String, Long> totalTermFrequencyInCorpusMap = broadcastedQueryTermFrequencyMap.getValue();
 //        System.out.println("totalTermFrequencyInCorpusMap: " + totalTermFrequencyInCorpusMap);
         Map<String, Double> scores = new HashMap<>();
-        Map<String, Long> termFrequencyInCurrentDocumentMap = nap.getQueryTermFrequency();
+        Map<String, Long> termFrequencyInCurrentDocumentMap = nap.getQueryTermFrequencyMap();
                 // calculate the score for each query term
         for(String queryTerm : termFrequencyInCurrentDocumentMap.keySet()){
             short termFrequencyInCurrentDocument = Long.valueOf(termFrequencyInCurrentDocumentMap.get(queryTerm)).shortValue();
