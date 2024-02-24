@@ -11,18 +11,18 @@ import java.util.List;
 public class DocumentRanking implements Serializable{
 
 	private static final long serialVersionUID = 2675653150567946299L;
-	
+
 	Query query;
 	List<RankedResult> results;
-	
+
 	public DocumentRanking() {}
-	
+
 	public DocumentRanking(Query query, List<RankedResult> results) {
 		super();
 		this.query = query;
 		this.results = results;
 	}
-	
+
 	public Query getQuery() {
 		return query;
 	}
@@ -35,12 +35,12 @@ public class DocumentRanking implements Serializable{
 	public void setResults(List<RankedResult> results) {
 		this.results = results;
 	}
-	
+
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
 		builder.append(query.getOriginalQuery());
 		builder.append("\n");
-		
+
 		int counter = 1;
 		for (RankedResult result : results) {
 			builder.append("  ");
@@ -54,11 +54,11 @@ public class DocumentRanking implements Serializable{
 			builder.append("\n");
 			counter++;
 		}
-		
-		
+
+
 		return builder.toString();
 	}
-	
+
 	public void write(String outDirectory) {
 		try {
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outDirectory+"/"+query.getOriginalQuery().replace(" ", "_"))));
@@ -70,5 +70,5 @@ public class DocumentRanking implements Serializable{
 			e.printStackTrace();
 		}
 	}
-	
+
 }

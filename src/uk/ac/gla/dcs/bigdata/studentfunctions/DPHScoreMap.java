@@ -2,7 +2,6 @@ package uk.ac.gla.dcs.bigdata.studentfunctions;
 
 import org.apache.spark.api.java.function.FlatMapFunction;
 import org.apache.spark.broadcast.Broadcast;
-import scala.Int;
 import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.providedstructures.RankedResult;
 import uk.ac.gla.dcs.bigdata.providedutilities.DPHScorer;
@@ -12,16 +11,16 @@ import uk.ac.gla.dcs.bigdata.studentstructures.ResultWithQuery;
 import java.util.*;
 
 public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, ResultWithQuery>{
-    private Broadcast<Long> broadcastedTotalArticles;
-    private Broadcast<Long> broadcastedTotalLength;
-    private Broadcast<Map> broadcastedQueryTermFrequencyMap;
-    private Broadcast<List<Query>> broadcastedQueryList;
+    private final Broadcast<Long> broadcastedTotalArticles;
+    private final Broadcast<Long> broadcastedTotalLength;
+    private final Broadcast<Map<String, Long>> broadcastedQueryTermFrequencyMap;
+    private final Broadcast<List<Query>> broadcastedQueryList;
 
 
     public DPHScoreMap(
             Broadcast<Long> broadcastedTotalArticles,
             Broadcast<Long> broadcastedTotalLength,
-            Broadcast<Map> broadcastedQueryTermFrequencyMap,
+            Broadcast<Map<String, Long>> broadcastedQueryTermFrequencyMap,
             Broadcast<List<Query>> broadcastedQueryList){
         this.broadcastedQueryTermFrequencyMap = broadcastedQueryTermFrequencyMap;
         this.broadcastedTotalArticles = broadcastedTotalArticles;
@@ -30,7 +29,7 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
     }
 
     @Override
-    public Iterator<ResultWithQuery> call(NewsArticleProcessed newsArticleProcessed) throws Exception {
+    public Iterator<ResultWithQuery> call(NewsArticleProcessed newsArticleProcessed) {
         List<ResultWithQuery> result = new ArrayList<>();
         // calculate the DPH score for each query term
         Map<String, Double> scores = calDPHScore(newsArticleProcessed);
@@ -62,7 +61,7 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
     /**
      * Calculate the DPH score for a given queryTerm and article
      * @author Zhenghao LIN
-     * @param nap
+     * @param nap is a NewsArticleProcessed instance
      * @return Map<String, Double> scores, String is the queryTerm, Double is the score
      */
     private Map<String, Double> calDPHScore(NewsArticleProcessed nap){
@@ -75,11 +74,11 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
         Map<String, Long> termFrequencyInCurrentDocumentMap = nap.getQueryTermFrequencyMap();
                 // calculate the score for each query term
         for(String queryTerm : termFrequencyInCurrentDocumentMap.keySet()){
-            short termFrequencyInCurrentDocument = Long.valueOf(termFrequencyInCurrentDocumentMap.get(queryTerm)).shortValue();
+            short termFrequencyInCurrentDocument = termFrequencyInCurrentDocumentMap.get(queryTerm).shortValue();
 //            int totalTermFrequencyInCorpus = totalTermFrequencyInCorpusMap.get(queryTerm);
             double score = DPHScorer.getDPHScore(
                     termFrequencyInCurrentDocument,
-                    Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue(),
+                    totalTermFrequencyInCorpusMap.get(queryTerm).intValue(),
                     nap.getArticleLength(),
                     averageDocumentLengthInCorpus,
                     totalDocsInCorpus);

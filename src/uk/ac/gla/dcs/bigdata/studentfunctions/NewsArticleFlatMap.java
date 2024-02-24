@@ -14,10 +14,10 @@ import java.util.*;
 public class NewsArticleFlatMap implements FlatMapFunction<NewsArticle, NewsArticleProcessed> {
 
     private transient TextPreProcessor newsProcessor;
-    private Broadcast<List<String>> broadcastedQueryTerms;
-    private LongAccumulator totalArticlesAccumulator;
-    private LongAccumulator totalLengthAccumulator;
-    private QueryTermFrequencyAccumulator queryTermFrequencyAccumulator;
+    private final Broadcast<List<String>> broadcastedQueryTerms;
+    private final LongAccumulator totalArticlesAccumulator;
+    private final LongAccumulator totalLengthAccumulator;
+    private final QueryTermFrequencyAccumulator queryTermFrequencyAccumulator;
 
     public NewsArticleFlatMap(Broadcast<List<String>> broadcastedQueryTerms, LongAccumulator totalArticles, LongAccumulator totalLength, QueryTermFrequencyAccumulator queryTermFrequencyAccumulator) {
         this.broadcastedQueryTerms = broadcastedQueryTerms;
@@ -27,7 +27,7 @@ public class NewsArticleFlatMap implements FlatMapFunction<NewsArticle, NewsArti
     }
 
     @Override
-    public Iterator<NewsArticleProcessed> call(NewsArticle value) throws Exception {
+    public Iterator<NewsArticleProcessed> call(NewsArticle value) {
         List<NewsArticleProcessed> result = new ArrayList<>();
         if (newsProcessor == null) {
             newsProcessor = new TextPreProcessor();

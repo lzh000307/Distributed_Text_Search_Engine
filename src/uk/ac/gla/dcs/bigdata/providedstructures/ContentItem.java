@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 /**
  * News articles are divided into multiple types of content block. A ContentItem represents one of these pieces of content.
- * 
+ *
  * @author Richard
  *
  */
@@ -31,7 +31,7 @@ public class ContentItem implements Serializable {
 	String role;
 	String name;
 	String bio;
-	
+
 	// if Kicker
 	String kicker;
 

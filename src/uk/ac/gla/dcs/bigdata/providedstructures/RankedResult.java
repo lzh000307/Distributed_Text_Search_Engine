@@ -5,13 +5,13 @@ import java.io.Serializable;
 public class RankedResult implements Serializable, Comparable<RankedResult> {
 
 	private static final long serialVersionUID = -2905684103776472843L;
-	
+
 	String docid;
 	NewsArticle article;
 	double score;
-	
+
 	public RankedResult() {}
-	
+
 	public RankedResult(String docid, NewsArticle article, double score) {
 		super();
 		this.docid = docid;
@@ -47,7 +47,7 @@ public class RankedResult implements Serializable, Comparable<RankedResult> {
 	public int compareTo(RankedResult o) {
 		return new Double(score).compareTo(o.score);
 	}
-	
-	
-	
+
+
+
 }

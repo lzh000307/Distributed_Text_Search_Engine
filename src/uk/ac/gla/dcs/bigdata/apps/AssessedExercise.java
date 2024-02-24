@@ -18,14 +18,12 @@ import uk.ac.gla.dcs.bigdata.providedstructures.Query;
 import uk.ac.gla.dcs.bigdata.studentfunctions.*;
 import uk.ac.gla.dcs.bigdata.studentstructures.*;
 
-import static org.apache.spark.sql.functions.*;
-
 
 /**
  * This is the main class where your Spark topology should be specified.
  *
  * By default, running this class will execute the topology defined in the
- * rankDocuments() method in local mode, although this may be overriden by
+ * rankDocuments method in local mode, although this may be overriden by
  * the spark.master environment variable.
  * @author Richard
  *
@@ -157,8 +155,7 @@ public class AssessedExercise {
 		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
 		System.out.println("Query Term Frequency 0: " + queryTermFrequencyAccumulator.value());
 		// Compute Query frequency
-		Map<String, Long> queryTermFrequency = new HashMap<>();
-		queryTermFrequency.putAll(queryTermFrequencyAccumulator.value());
+        Map<String, Long> queryTermFrequency = new HashMap<>(queryTermFrequencyAccumulator.value());
 //		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
 //		System.out.println("queryTermFrequency: " + queryTermFrequency);
 //		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
@@ -167,7 +164,7 @@ public class AssessedExercise {
 		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
 //		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
-		final Broadcast<Map> broadcastedQueryTermFrequencyMap = spark.sparkContext().broadcast(queryTermFrequency, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+		final Broadcast<Map<String, Long>> broadcastedQueryTermFrequencyMap = spark.sparkContext().broadcast(queryTermFrequency, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
 
 		//compute
 		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryTermFrequencyMap, broadcastedQueryList), Encoders.bean(ResultWithQuery.class));

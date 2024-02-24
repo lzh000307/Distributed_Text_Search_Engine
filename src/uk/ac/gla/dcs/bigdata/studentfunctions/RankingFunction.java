@@ -39,9 +39,7 @@ public class RankingFunction {
         // compare similarity and find the top 10
         // new a output list
         List<DocumentRanking> output = new ArrayList<>();
-        int diffrernce = 0; // the difference between the two documents rank
         for(DocumentRanking ranking : documentRankings){
-            int resultNum = 0;
             int loopLength = ranking.getResults().size();
             // for speed up
             List<RankedResult> rr = ranking.getResults();
