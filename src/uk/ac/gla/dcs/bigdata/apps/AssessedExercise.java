@@ -118,60 +118,81 @@ public class AssessedExercise {
 		//----------------------------------------------------------------
 		// Your Spark Topology should be defined here
 		//----------------------------------------------------------------
-		// Convert Query
-		SparkContext sc = spark.sparkContext();
 
-		LongAccumulator totalArticlesAccumulator = sc.longAccumulator("Total Articles");
-		LongAccumulator totalLengthAccumulator = sc.longAccumulator("Total Article Length");
-
+		// Spark context setup for accumulators and broadcasting
+		LongAccumulator totalArticlesAccumulator = spark.sparkContext().longAccumulator("Total Articles");
+		LongAccumulator totalLengthAccumulator = spark.sparkContext().longAccumulator("Total Article Length");
 		QueryTermFrequencyAccumulator queryTermFrequencyAccumulator = new QueryTermFrequencyAccumulator();
 		spark.sparkContext().register(queryTermFrequencyAccumulator, "Query Term Frequency");
 
-
+		// Collect all unique query terms, avoid calculation(sum) errors
 		List<String> allQueryTerms = queries.flatMap(
 				(FlatMapFunction<Query, String>) query -> query.getQueryTerms().iterator(),
 				Encoders.STRING()
 		).collectAsList();
 		// convert List<String> to hash set to remove duplicate
 		Set<String> allQueryTermsSet = new HashSet<>(allQueryTerms);
-	    // convert hash set to list
+	    // convert hash set to array list
 		allQueryTerms = new ArrayList<>(allQueryTermsSet);
-
 		List<Query> queryList = queries.collectAsList();
+
+		// Create a list of queries, This entity is used to store the queries use a hash map.
 		MyQueries myQueries = new MyQueries(queryList);
-		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
-		final Broadcast<List<Query>> broadcastedQueryList = spark.sparkContext().broadcast(queryList, scala.reflect.ClassTag$.MODULE$.apply(List.class));
-		// Convert NewsArticle
-//		Dataset<NewsArticleProcessed> newsArticleProcessed = news.map(new NewsArticleMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
-		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = news.flatMap(new NewsArticleFlatMap(broadcastedQueryTerms, totalArticlesAccumulator, totalLengthAccumulator, queryTermFrequencyAccumulator), Encoders.bean(NewsArticleProcessed.class));
 
-		// COUNT
+		// Broadcast variables for use in distributed computations
+		final Broadcast<List<String>> broadcastedQueryTerms = spark.sparkContext().
+				broadcast(allQueryTerms, scala.reflect.ClassTag$.MODULE$.apply(List.class));
+		final Broadcast<List<Query>> broadcastedQueryList = spark.sparkContext().
+				broadcast(queryList, scala.reflect.ClassTag$.MODULE$.apply(List.class));
+
+		// Process news articles, filtering and accumulating statistics
+		Dataset<NewsArticleProcessed> newsArticleProcessedFiltered = news.flatMap(
+				new NewsArticleFlatMap(broadcastedQueryTerms,
+						totalArticlesAccumulator,
+						totalLengthAccumulator,
+						queryTermFrequencyAccumulator),
+				Encoders.bean(NewsArticleProcessed.class));
+
+		// Action to trigger transformations and cache the result because we need the value of the accumulators
 		newsArticleProcessedFiltered.count();
-//		List<NewsArticleProcessed> nap = newsArticleProcessedFiltered.collectAsList();
-		newsArticleProcessedFiltered.cache(); // cache the dataset
-		// execute the map function
+		newsArticleProcessedFiltered.cache();
 
+		/**
+		 * Accumulator values are used after an action is triggered.
+		 *
+		 * According to the instruction, we feel that the blank paragraphs are also counted in the overall
+		 * "first five paragraphs". Therefore, we have only skipped paragraphs with a value of null.
+		 * This is slightly DIFFERENT from the results of skipping blank paragraphs, but it doesn't affect the result.
+		 * If it does affect the result in some cases, please go to the NewsArticleFlatMap.java file
+		 * to modify it (we commented the relevant code).
+		 */
 		System.out.println("Total Articles Processed: " + totalArticlesAccumulator.value());
 		System.out.println("Total Article Length Sum: " + totalLengthAccumulator.value());
-		System.out.println("Query Term Frequency 0: " + queryTermFrequencyAccumulator.value());
-		// Compute Query frequency
-        Map<String, Long> queryTermFrequency = new HashMap<>(queryTermFrequencyAccumulator.value());
-//		System.out.println("Query Term Frequency 0.1: " + queryTermFrequencyAccumulator.value());
-//		System.out.println("queryTermFrequency: " + queryTermFrequency);
-//		System.out.println("Query Term Frequency 0.9: " + queryTermFrequencyAccumulator.value());
-		//convert to list
-		//boardcast the totalArticlesAccumulator and totalLengthAccumulator
-		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
-		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
-//		final Broadcast<Map> broadcastedQueryFrequencyMap = spark.sparkContext().broadcast(queryFrequencyMap, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
-		final Broadcast<Map<String, Long>> broadcastedQueryTermFrequencyMap = spark.sparkContext().broadcast(queryTermFrequency, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+		System.out.println("Total Query Term Frequency: " + queryTermFrequencyAccumulator.value());
 
-		//compute
-		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(new DPHScoreMap(broadcastedTotalArticles, broadcastedTotalLength, broadcastedQueryTermFrequencyMap, broadcastedQueryList), Encoders.bean(ResultWithQuery.class));
-		// execute the map function
-//		resultWithQueryDataset.count();
-		// print queryTermFrequency accumulator
-		// convert to list
+		/**
+		 * Shallow copy of the value in queryTermFrequencyAccumulator.
+		 * Since String and Long are final types, shallow copying can ensure
+		 * that the values inside queryTermFrequency are not affected by other data structures.
+		 */
+		Map<String, Long> queryTermFrequency = new HashMap<>(queryTermFrequencyAccumulator.value());
+
+		// Broadcasting variables for DPH score calculation
+		final Broadcast<Long> broadcastedTotalArticles = spark.sparkContext().
+				broadcast(totalArticlesAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
+		final Broadcast<Long> broadcastedTotalLength = spark.sparkContext().
+				broadcast(totalLengthAccumulator.value(), scala.reflect.ClassTag$.MODULE$.apply(Long.class));
+		final Broadcast<Map<String, Long>> broadcastedQueryTermFrequencyMap = spark.sparkContext().
+				broadcast(queryTermFrequency, scala.reflect.ClassTag$.MODULE$.apply(Map.class));
+
+		// Compute DPH scores for each article-query pair
+		Dataset<ResultWithQuery> resultWithQueryDataset = newsArticleProcessedFiltered.flatMap(
+				new DPHScoreMap(broadcastedTotalArticles,
+								broadcastedTotalLength,
+								broadcastedQueryTermFrequencyMap,
+								broadcastedQueryList),
+				Encoders.bean(ResultWithQuery.class));
+		// Collect results and rank documents
 		List<ResultWithQuery> resultWithQueryList = resultWithQueryDataset.collectAsList();
 		return RankingFunction.rankDocuments(resultWithQueryList, myQueries);
 	}

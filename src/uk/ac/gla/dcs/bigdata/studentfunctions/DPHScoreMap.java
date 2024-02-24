@@ -28,23 +28,32 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
         this.broadcastedQueryList = broadcastedQueryList;
     }
 
+    /**
+     * This function calculates the DPH score for each query term and returns a list of ResultWithQuery
+     * Each ResultWithQuery contains a RankedResult (which contains a DPH score) and a Query
+     * @param newsArticleProcessed instance of NewsArticleProcessed
+     * @return list of ResultWithQuery
+     */
     @Override
     public Iterator<ResultWithQuery> call(NewsArticleProcessed newsArticleProcessed) {
         List<ResultWithQuery> result = new ArrayList<>();
-        // calculate the DPH score for each query term
+        // Calculate DPH scores for each query term in the article
         Map<String, Double> scores = calDPHScore(newsArticleProcessed);
-        // sum up scores of queryterm according to query
-        // get query
+        // Aggregate scores for each query and create a ResultWithQuery object
         List<Query> queryList = broadcastedQueryList.getValue();
         for(Query query : queryList){
             double score = 0;
+            // To avoid the overhead of calling query.getQueryTerms().size() multiple times
             int queryTermSize = query.getQueryTerms().size();
+            // Sum up scores for terms present in the query
             for(int i = 0; i < queryTermSize; i++){
                 // if exists, add the score
                 if(scores.containsKey(query.getQueryTerms().get(i))){
                     score += scores.get(query.getQueryTerms().get(i));
                 }
             }
+            // if the score is greater than 0, add to the result list
+            // if the score is 0, it means the article does not hit the current query
             if(score > 0.0) {
                 result.add(new ResultWithQuery(
                         new RankedResult(
@@ -54,13 +63,11 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
                         query));
             }
         }
-//        System.out.println("Query: " + queryWithArticle.getQuery().getOriginalQuery() + " Score: " + score);
         return result.iterator();
     }
 
     /**
      * Calculate the DPH score for a given queryTerm and article
-     * @author Zhenghao LIN
      * @param nap is a NewsArticleProcessed instance
      * @return Map<String, Double> scores, String is the queryTerm, Double is the score
      */
@@ -69,13 +76,12 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
         Long totalDocumentLength = broadcastedTotalLength.getValue();
         double averageDocumentLengthInCorpus = (double)totalDocumentLength / (double)totalDocsInCorpus;
         Map<String, Long> totalTermFrequencyInCorpusMap = broadcastedQueryTermFrequencyMap.getValue();
-//        System.out.println("totalTermFrequencyInCorpusMap: " + totalTermFrequencyInCorpusMap);
         Map<String, Double> scores = new HashMap<>();
         Map<String, Long> termFrequencyInCurrentDocumentMap = nap.getQueryTermFrequencyMap();
-                // calculate the score for each query term
+
+        // Calculation logic for DPH scores based on term frequencies and document statistics
         for(String queryTerm : termFrequencyInCurrentDocumentMap.keySet()){
             short termFrequencyInCurrentDocument = termFrequencyInCurrentDocumentMap.get(queryTerm).shortValue();
-//            int totalTermFrequencyInCorpus = totalTermFrequencyInCorpusMap.get(queryTerm);
             double score = DPHScorer.getDPHScore(
                     termFrequencyInCurrentDocument,
                     totalTermFrequencyInCorpusMap.get(queryTerm).intValue(),
@@ -83,35 +89,7 @@ public class DPHScoreMap implements FlatMapFunction<NewsArticleProcessed, Result
                     averageDocumentLengthInCorpus,
                     totalDocsInCorpus);
             scores.put(queryTerm, score);
-//            if(nap.getId().equals("8c54645a-4de4-11e1-970f-5aedabc3a02c")){
-//                System.out.println("queryTerm: " + queryTerm);
-//                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
-//                System.out.println("termFrequencyInCurrentDocumentLong: " + termFrequencyInCurrentDocumentMap.get(queryTerm));
-//                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
-//                System.out.println("totalTermFrequencyInCorpusLong: " + totalTermFrequencyInCorpusMap.get(queryTerm));
-//                System.out.println("articleLength: " + nap.getArticleLength());
-//                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
-//                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
-//                System.out.println("score: " + score);
-//            }
-//            if(nap.getId().equals("5dbbd4e0-5297-11e1-bd4f-8a7d53f6d6c2")){
-//                System.out.println("queryTerm: " + queryTerm);
-//                System.out.println("termFrequencyInCurrentDocument: " + termFrequencyInCurrentDocument);
-//                System.out.println("termFrequencyInCurrentDocumentLong: " + termFrequencyInCurrentDocumentMap.get(queryTerm));
-//                System.out.println("totalTermFrequencyInCorpus: " + Long.valueOf(totalTermFrequencyInCorpusMap.get(queryTerm)).intValue());
-//                System.out.println("totalTermFrequencyInCorpusLong: " + totalTermFrequencyInCorpusMap.get(queryTerm));
-//                System.out.println("articleLength: " + nap.getArticleLength());
-//                System.out.println("averageDocumentLengthInCorpus: " + averageDocumentLengthInCorpus);
-//                System.out.println("totalDocsInCorpus: " + totalDocsInCorpus);
-//                System.out.println("score: " + score);
-//            }
         }
-//        if(nap.getId().equals("985fe83c-45dd-11e1-b0ef-752cfddb1b51")){
-//            System.out.println("Fannie and Freddie don’t deserve blame for bubble");
-//            System.out.println("termFrequencyInCurrentDocumentMap: " + termFrequencyInCurrentDocumentMap);
-//            System.out.println("scores: " + scores);
-            // print dph parameters
-//        }
         return scores;
     }
 

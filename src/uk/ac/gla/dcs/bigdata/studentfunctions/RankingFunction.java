@@ -10,8 +10,15 @@ import uk.ac.gla.dcs.bigdata.studentstructures.ResultWithQuery;
 import java.util.*;
 
 public class RankingFunction {
+    /**
+     * Static method to rank documents return the top 10 documents for each query without redundancy
+     * @param resultWithQueryList list of RankedResult associated with queries
+     * @param myQueries a Map of queries
+     * @return a list of DocumentRanking, the top 10 documents for each query
+     */
     public static List<DocumentRanking> rankDocuments(List<ResultWithQuery> resultWithQueryList, MyQueries myQueries){
-        // convert to DocumentRanking
+
+        // Initialization and grouping of ranked results by query.
         Map<Query, List<RankedResult>> resultMap = new HashMap<>();
         for(ResultWithQuery resultWithQuery : resultWithQueryList) {
             Query query = myQueries.getQuery(resultWithQuery.getQuery());
@@ -24,20 +31,20 @@ public class RankingFunction {
                 resultMap.put(query, rankedResults);
             }
         }
-        // convert to list
+
+        // Conversion of the resultMap to a list of DocumentRanking objects.
         List<DocumentRanking> documentRankings = new ArrayList<>();
         for(Map.Entry<Query, List<RankedResult>> entry : resultMap.entrySet()) {
             Query query = entry.getKey();
             List<RankedResult> rankedResults = entry.getValue();
-            // sort the list
+
+            // Each document ranking is sorted and reversed to ensure the highest-ranked documents are first.
             Collections.sort(rankedResults);
-            // reverse
             Collections.reverse(rankedResults);
             documentRankings.add(new DocumentRanking(query, rankedResults));
         }
-        // now we have a List of DocumentRanking
-        // compare similarity and find the top 10
-        // new a output list
+
+        // Final stage of ranking involves filtering out near-duplicate documents based on title similarity.
         List<DocumentRanking> output = new ArrayList<>();
         for(DocumentRanking ranking : documentRankings){
             int loopLength = ranking.getResults().size();
@@ -55,12 +62,11 @@ public class RankingFunction {
             for(int i = 0; i < loopLength - 1; i++){
                 if(newRR.size() == 10)
                     break;
-                // not enough 10 results
                 // compare similarity
                 // current document title is t1
                 String t1 = rr.get(i).getArticle().getTitle();
                 boolean similarityFlag = false;
-                // compare with previous documents
+                // compare with previous documents in newRR
                 for(RankedResult newRRInstance : newRR){
                     double distance = TextDistanceCalculator.similarity(t1, newRRInstance.getArticle().getTitle());
                     if (distance < 0.5) {
@@ -71,9 +77,14 @@ public class RankingFunction {
                 if(similarityFlag){
                     continue;
                 }
-                //if not similar to any pairs of documents
+                // if not similar to any pairs of documents, add it to newRR
                 newRR.add(rr.get(i));
             }
+            /**
+             * After discussing with professor,
+             * we agreed that it is almost impossible to search for less than 10 news items in the large data set
+             * Therefore, we didn't do a random sampling of irrelevant news when the results were less than 10.
+             */
 //			if(rr.size() < 10){
 //				System.out.println("WARNING: Query " + ranking.getQuery().getOriginalQuery() + " has less than 10 results");
 //				// no need to add more results
