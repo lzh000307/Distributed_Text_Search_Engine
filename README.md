@@ -1,93 +1,45 @@
-# BD-AE-01
 
+# Big Data Assessed Exercise Report
+    
+## Program Logic Summary
+    
+Our overall program starts with a comprehensive pre-processing stage, which includes cleaning the text data by removing stop words and applying stemming to reduce words to their base form. By setting up a Spark environment and reading query and news article data. It preprocesses this data into a structured format (queries and news articles) and sets up accumulators and broadcast variables for distributed processing. The main logic involves processing news articles based on queries, filtering and accumulating statistics, and then calculating DPH scores for article-query pairs. The results are aggregated, ranked, and finally written to disk. To optimize the task's efficiency amidst a vast dataset, our strategy minimizes dataset traversals to essential iterations only. Given the high cost of even a single pass through the data, we've deduced that at least two passes are indispensable. The initial pass employs accumulators to gather data critical for the subsequent DPH score computation. The second pass is then dedicated to this calculation. The concluding operation, sorting and identifying the top 10 distinct articles by DPH score, demands comparatively minor computational resources. In summary, this project represents a comprehensive solution for batch-based text search and filtering, combining the distributed processing capabilities of Apache Spark with advanced text processing technologies to provide a scalable, efficient, and effective document processing pipeline.
+    
+## Custom Functions
+    
+**DPHScoreMap:**  
+It calculates the relevance score (DPH score) of each news article for a series of queries and outputs those results with scores above zero, alongside the queries they relate to. The function takes processed news articles (NewsArticleProcessed type) as input. Additionally, it uses Broadcast variables to receive the total number of articles, total length of all articles, a map of query term frequencies across the corpus, and a list of queries. For each input news article, the function calculates the DPH score for each query term. This score is based on the frequency of the query term in the article, its frequency across the entire corpus, the length of the article, the average length of documents in the corpus, and the total number of documents in the corpus. For each query, the function sums the DPH scores of its terms to get a total score for that query against the current article. If a query's total score for an article is greater than 0, the function outputs a ResultWithQuery object, which includes the score, article ID, article content, and query information. This function produces an iterator of a list of scoring results for each input article.
+    
+**NewsArticleFlatMap:**  
+The function is to preprocess and analyse incoming news articles, calculating and recording information related to article length and query term frequencies, and outputting the results in a format that is convenient for further operations. It takes a NewsArticle object as input. Receives a list of query terms via a Broadcast variable, uses LongAccumulator to accumulate the total number of articles and their total length, and a custom accumulator QueryTermFrequencyAccumulator for accumulating query term frequencies. Preprocesses the article's title and content (up to the first five paragraphs), including tokenization, stop-word removal, etc. Counts the total number of words in the processed title and content to determine the article's length. Counts the frequency of each query term within the processed article. Adds the current article to the total count and length accumulators and updates the query term frequency accumulator. If the article's title is empty, contains only spaces, or if the article does not contain any of the query terms, it is excluded from further processing. For articles that meet the criteria, it outputs a NewsArticleProcessed object, which includes the article ID, article length, a map of query term frequencies, and the original NewsArticle object. These outputs are prepared for subsequent analysis or scoring calculations.
+    
+**RankingFunction**  
+It converts search results into output by sorting, removing similar articles and outputting the top 10 most relevant data to meet the project requirements. It accepts a list of ResultWithQuery objects, each of which contains a query result and the corresponding query. A map is created to associate each query with its corresponding ranked results (a list of RankedResult). Iterates over the input list, and for each element, finds the corresponding query object based on the query and adds the query result to the list associated with that query in the map. If the map does not already contain a key for that query, a new list is created, and the result is added. Each query's result list is sorted in descending order based on scores. Then, deduplication is performed for the ranked results of each query, removing similar documents with a title textual distance less than 0.5, retaining only the highest-scoring document. Ensures that the result list for each query contains no more than 10 documents. Each processed query and its corresponding deduplicated document list are encapsulated into a DocumentRanking object, and these objects are collected as the final output returned.
+    
+## Efficiency Discussion
+   
+To do this task efficiently, we want to complete the computation with as few iterations of the dataset as possible. Because the dataset is extremely large, it is costly to iterate through it once. By analysing the task, we believe that we need to go through at least two iterations to complete the computation because the data from the accumulator of the first iteration is necessary for computing the DPH. The second time is to calculate the DPH score, and the last stage is not very computationally intensive because it only needs to sort and traverse 10 non-similar documents starting from the article with the high DPH score. 
+   
+We want to minimise double counting, e.g., different query may contain the same query term, then the DPH scores corresponding to these query terms can be counted only once. 
+   
+We broadcast all the QueryList, totalDocsInCorpus, totalDocumentLength, totalTermFrequencyInCorpusMap needed for DPH calculation so that the common parameters needed for these calculations are distributed to each executor.
+   
+We want to reduce the cache size. NewsArticleProcessed contains NewsArticle entity, which makes NewsArticleProcessed entity large, we have tried to exclude NewsArticle from NewsArticleProcessed, and keep only DocId and title to calculate the article similarity, and then find out the corresponding article when outputting the result. However, this implementation did not improve the efficiency of calculating DPH scores, but spent more time in finding articles, so we did not adopt this solution.
+   
+## Challenges
+   
+Encoders.bean is unable to properly serialise and reserialise data of type Map, which can cause some errors. We solved this by turning the Map data into a List containing two variables stored as entities, and then constructing it as a Map when used.
+   
+Two java variables of type int remain int after division, even when stored as double data types, which will cause averageDocumentLengthInCorpus to lose the value after the decimal point. Importantly, this will change the DPH scores of the articles, flipping the rankings of 2 articles with similar DPHs, and the results will likely retain the article that "actually" has the lower DPH score! This is a difficult problem to detect, but it does affect the output. It can be solved by simply converting the int type to a double type in the calculation. 
+   
+In order to make the program run more efficiently, we kept refactoring various functions. At the very
 
+## Contributions
 
-## Getting started
+Everyone in this group has contributed an equal amount to this project.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+Zhenghao LIN - 33.3%
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+Min MA - 33.3%
 
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://stgit.dcs.gla.ac.uk/2024-big-data/bigdata-team-36/bd-ae-01.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://stgit.dcs.gla.ac.uk/2024-big-data/bigdata-team-36/bd-ae-01/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Meishan LIU - 33.3%
