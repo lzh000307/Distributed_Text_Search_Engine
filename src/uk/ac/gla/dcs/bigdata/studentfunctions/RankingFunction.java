@@ -40,6 +40,12 @@ public class RankingFunction {
 
             // Each document ranking is sorted and reversed to ensure the highest-ranked documents are first.
             Collections.sort(rankedResults);
+            /**
+             * Reversing the list causes instability in the sorting (when two articles with the
+             * same score are encountered, the article that was on top gets flipped to the bottom).
+             * The title does not specify the output of the top article when the scores are the same,
+             * so we did not modify it to stabilize the sorting.
+             */
             Collections.reverse(rankedResults);
             documentRankings.add(new DocumentRanking(query, rankedResults));
         }
