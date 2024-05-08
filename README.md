@@ -33,13 +33,3 @@ Encoders.bean is unable to properly serialise and reserialise data of type Map, 
 Two java variables of type int remain int after division, even when stored as double data types, which will cause averageDocumentLengthInCorpus to lose the value after the decimal point. Importantly, this will change the DPH scores of the articles, flipping the rankings of 2 articles with similar DPHs, and the results will likely retain the article that "actually" has the lower DPH score! This is a difficult problem to detect, but it does affect the output. It can be solved by simply converting the int type to a double type in the calculation. 
    
 In order to make the program run more efficiently, we kept refactoring various functions. At the very
-
-## Contributions
-
-Everyone in this group has contributed an equal amount to this project.
-
-Zhenghao LIN - 33.3%
-
-Min MA - 33.3%
-
-Meishan LIU - 33.3%
